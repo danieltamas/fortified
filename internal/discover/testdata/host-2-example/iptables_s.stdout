@@ -1,0 +1,71 @@
+-P INPUT ACCEPT
+-P FORWARD DROP
+-P OUTPUT ACCEPT
+-N DOCKER
+-N DOCKER-BRIDGE
+-N DOCKER-CT
+-N DOCKER-FORWARD
+-N DOCKER-INTERNAL
+-N DOCKER-USER
+-N ts-forward
+-N ts-input
+-A INPUT -s 100.64.10.2/32 -i wg0 -j ACCEPT
+-A INPUT -j ts-input
+-A INPUT -s 100.64.10.2/32 -i wg0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A FORWARD -j ts-forward
+-A FORWARD -j DOCKER-USER
+-A FORWARD -j DOCKER-FORWARD
+-A DOCKER -d 172.20.0.19/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 443 -j ACCEPT
+-A DOCKER -d 172.20.0.19/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 80 -j ACCEPT
+-A DOCKER -d 172.20.0.28/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 5603 -j ACCEPT
+-A DOCKER -d 172.20.0.26/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 5601 -j ACCEPT
+-A DOCKER -d 172.20.0.13/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 5602 -j ACCEPT
+-A DOCKER -d 172.20.0.23/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 5555 -j ACCEPT
+-A DOCKER -d 172.20.0.7/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 5678 -j ACCEPT
+-A DOCKER -d 172.20.0.30/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 8080 -j ACCEPT
+-A DOCKER -d 172.20.0.29/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 8080 -j ACCEPT
+-A DOCKER -d 172.20.0.31/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9111 -j ACCEPT
+-A DOCKER -d 172.20.0.9/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 3899 -j ACCEPT
+-A DOCKER -d 172.20.0.10/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 6432 -j ACCEPT
+-A DOCKER -d 172.20.0.21/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 5432 -j ACCEPT
+-A DOCKER -d 172.20.0.18/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 3000 -j ACCEPT
+-A DOCKER -d 172.20.0.12/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 7000 -j ACCEPT
+-A DOCKER -d 172.20.0.27/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 8000 -j ACCEPT
+-A DOCKER -d 172.20.0.25/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER -d 172.20.0.24/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER -d 172.20.0.22/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER -d 172.20.0.17/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER -d 172.20.0.16/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER -d 172.20.0.15/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER -d 172.20.0.14/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER -d 172.20.0.11/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER -d 172.20.0.8/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER -d 172.20.0.6/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER -d 172.20.0.5/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 6379 -j ACCEPT
+-A DOCKER -d 172.20.0.4/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 3306 -j ACCEPT
+-A DOCKER -d 172.20.0.3/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER -d 172.20.0.2/32 ! -i br-f9bc588a536c -o br-f9bc588a536c -p tcp -m tcp --dport 9000 -j ACCEPT
+-A DOCKER ! -i br-5daab6b78254 -o br-5daab6b78254 -j DROP
+-A DOCKER ! -i br-f9bc588a536c -o br-f9bc588a536c -j DROP
+-A DOCKER ! -i docker0 -o docker0 -j DROP
+-A DOCKER-BRIDGE -o br-5daab6b78254 -j DOCKER
+-A DOCKER-BRIDGE -o br-f9bc588a536c -j DOCKER
+-A DOCKER-BRIDGE -o docker0 -j DOCKER
+-A DOCKER-CT -o br-5daab6b78254 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A DOCKER-CT -o br-f9bc588a536c -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A DOCKER-CT -o docker0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A DOCKER-FORWARD -j DOCKER-CT
+-A DOCKER-FORWARD -j DOCKER-INTERNAL
+-A DOCKER-FORWARD -j DOCKER-BRIDGE
+-A DOCKER-FORWARD -i br-5daab6b78254 -j ACCEPT
+-A DOCKER-FORWARD -i br-f9bc588a536c -j ACCEPT
+-A DOCKER-FORWARD -i docker0 -j ACCEPT
+-A ts-forward -i tailscale0 -j MARK --set-xmark 0x40000/0xff0000
+-A ts-forward -m mark --mark 0x40000/0xff0000 -j ACCEPT
+-A ts-forward -s 100.64.0.0/10 -o tailscale0 -j DROP
+-A ts-forward -o tailscale0 -j ACCEPT
+-A ts-input -s 100.106.175.62/32 -i lo -j ACCEPT
+-A ts-input -i tailscale0 -j ACCEPT
+-A ts-input -p udp -m udp --dport 41641 -j ACCEPT
+-A ts-input -s 100.115.92.0/23 ! -i tailscale0 -j RETURN
+-A ts-input -s 100.64.0.0/10 ! -i tailscale0 -j DROP

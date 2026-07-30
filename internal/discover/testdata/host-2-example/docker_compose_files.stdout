@@ -1,0 +1,11 @@
+/home/docker/mysql/docker-compose.yml
+/home/docker/sftp/docker-compose.yml
+/home/docker/psql/docker-compose.yml
+/home/docker/n8n/docker-compose.yml
+/home/docker/nginx/docker-compose.yml
+/home/docker/redis-stack/docker-compose.yml
+/home/example/ai-api/docker-compose.yml
+/home/dozzle-secondary/docker-compose.yml
+/home/dozzle-n8n-host-example/docker-compose.yml
+/home/dozzle/docker-compose.yml
+/home/operator/exampledb/docker-compose.yml

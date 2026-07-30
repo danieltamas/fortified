@@ -1,0 +1,14 @@
+servers:
+  host-2-example:
+    ssh:
+      host: 203.0.113.10
+      port: 15086
+      user: root
+    provider: hetzner
+    destination: host2-backup
+    databases:
+      - kind: mariadb
+        container: mysql
+        dump_strategy: docker-exec
+        auth_ref: TODO
+    encryption_key_ref: secret://fortified/host-2-example/borg-passphrase

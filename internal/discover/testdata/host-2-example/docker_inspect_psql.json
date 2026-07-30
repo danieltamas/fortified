@@ -1,0 +1,29 @@
+[
+  {
+    "Id": "a1b2c3d4e5f6",
+    "Name": "/psql",
+    "Config": {
+      "Image": "postgres:17-bookworm",
+      "Env": [
+        "POSTGRES_PASSWORD=REDACTED-not-a-real-secret",
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "GOSU_VERSION=1.17",
+        "LANG=en_US.utf8",
+        "PG_MAJOR=17",
+        "PG_VERSION=17.2-1.pgdg120+1",
+        "PGDATA=/var/lib/postgresql/data"
+      ]
+    },
+    "Mounts": [
+      {"Source": "/home/docker/psql/data", "Destination": "/var/lib/postgresql/data"},
+      {"Source": "/home/docker/psql/conf.d", "Destination": "/var/lib/postgresql/data/conf.d"},
+      {"Source": "/home/docker/psql/pg_hba.conf", "Destination": "/var/lib/postgresql/data/pg_hba.conf"},
+      {"Source": "/home/docker/psql/postgresql.conf", "Destination": "/var/lib/postgresql/data/postgresql.conf"},
+      {"Source": "/home/docker/psql/backups", "Destination": "/home/backups"}
+    ],
+    "NetworkSettings": {
+      "Networks": {"lan": {}},
+      "Ports": {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": "5432"}]}
+    }
+  }
+]

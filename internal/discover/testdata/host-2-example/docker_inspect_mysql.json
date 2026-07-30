@@ -1,0 +1,28 @@
+[
+  {
+    "Id": "f6e5d4c3b2a1",
+    "Name": "/mysql",
+    "Config": {
+      "Image": "mariadb:10.4",
+      "Env": [
+        "MYSQL_DATABASE=REDACTED-not-a-real-value",
+        "MYSQL_USER=REDACTED-not-a-real-value",
+        "MYSQL_PASSWORD=REDACTED-not-a-real-secret",
+        "MYSQL_ROOT_PASSWORD=REDACTED-not-a-real-secret",
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "GOSU_VERSION=1.17",
+        "LANG=C.UTF-8",
+        "MARIADB_MAJOR=10.4",
+        "MARIADB_VERSION=1:10.4.34+maria~ubu2004"
+      ]
+    },
+    "Mounts": [
+      {"Source": "/home/docker/mysql/dumps", "Destination": "/dumps"},
+      {"Source": "/home/docker/mysql/mysql-data", "Destination": "/var/lib/mysql"}
+    ],
+    "NetworkSettings": {
+      "Networks": {"lan": {}},
+      "Ports": {"3306/tcp": [{"HostIp": "127.0.0.1", "HostPort": "3306"}]}
+    }
+  }
+]

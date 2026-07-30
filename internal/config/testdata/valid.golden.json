@@ -1,0 +1,52 @@
+{
+  "Servers": {
+    "host-2-example": {
+      "SSH": {
+        "Host": "203.0.113.10",
+        "Port": 15086,
+        "User": "root"
+      },
+      "Provider": "hetzner",
+      "Destination": "host2-backup",
+      "Archive": [
+        {
+          "Path": "/home",
+          "Glob": "*/docker-compose.yml"
+        },
+        {
+          "Path": "/etc/letsencrypt",
+          "Glob": ""
+        }
+      ],
+      "Databases": [
+        {
+          "Kind": "postgres",
+          "Container": "psql",
+          "DumpStrategy": "docker-exec",
+          "AuthRef": ""
+        },
+        {
+          "Kind": "mariadb",
+          "Container": "mysql",
+          "DumpStrategy": "docker-exec",
+          "AuthRef": "secret://fortified/host-2-example/mariadb-root"
+        }
+      ],
+      "EncryptionKeyRef": "secret://fortified/host-2-example/borg-passphrase",
+      "Retention": {
+        "KeepDaily": 7,
+        "KeepWeekly": 4,
+        "KeepMonthly": 6
+      },
+      "Hetzner": {
+        "MainAccount": {
+          "Host": "u123456.your-storagebox.de",
+          "Port": 22,
+          "User": "u123456"
+        },
+        "HCloudTokenRef": "env://HCLOUD_TOKEN"
+      },
+      "WorkspaceDir": ""
+    }
+  }
+}

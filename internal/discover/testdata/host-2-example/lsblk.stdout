@@ -1,0 +1,199 @@
+{
+   "blockdevices": [
+      {
+         "name": "zram0",
+         "maj:min": "251:0",
+         "rm": false,
+         "size": "31G",
+         "ro": false,
+         "type": "disk",
+         "mountpoints": [
+             "[SWAP]"
+         ]
+      },{
+         "name": "nvme1n1",
+         "maj:min": "259:0",
+         "rm": false,
+         "size": "953.9G",
+         "ro": false,
+         "type": "disk",
+         "mountpoints": [
+             null
+         ],
+         "children": [
+            {
+               "name": "nvme1n1p1",
+               "maj:min": "259:1",
+               "rm": false,
+               "size": "256M",
+               "ro": false,
+               "type": "part",
+               "mountpoints": [
+                   null
+               ]
+            },{
+               "name": "nvme1n1p2",
+               "maj:min": "259:2",
+               "rm": false,
+               "size": "32G",
+               "ro": false,
+               "type": "part",
+               "mountpoints": [
+                   null
+               ],
+               "children": [
+                  {
+                     "name": "md0",
+                     "maj:min": "9:0",
+                     "rm": false,
+                     "size": "32G",
+                     "ro": false,
+                     "type": "raid1",
+                     "mountpoints": [
+                         "[SWAP]"
+                     ]
+                  }
+               ]
+            },{
+               "name": "nvme1n1p3",
+               "maj:min": "259:3",
+               "rm": false,
+               "size": "1G",
+               "ro": false,
+               "type": "part",
+               "mountpoints": [
+                   null
+               ],
+               "children": [
+                  {
+                     "name": "md1",
+                     "maj:min": "9:1",
+                     "rm": false,
+                     "size": "1022M",
+                     "ro": false,
+                     "type": "raid1",
+                     "mountpoints": [
+                         "/boot"
+                     ]
+                  }
+               ]
+            },{
+               "name": "nvme1n1p4",
+               "maj:min": "259:4",
+               "rm": false,
+               "size": "920.6G",
+               "ro": false,
+               "type": "part",
+               "mountpoints": [
+                   null
+               ],
+               "children": [
+                  {
+                     "name": "md2",
+                     "maj:min": "9:2",
+                     "rm": false,
+                     "size": "920.5G",
+                     "ro": false,
+                     "type": "raid1",
+                     "mountpoints": [
+                         "/"
+                     ]
+                  }
+               ]
+            }
+         ]
+      },{
+         "name": "nvme0n1",
+         "maj:min": "259:5",
+         "rm": false,
+         "size": "953.9G",
+         "ro": false,
+         "type": "disk",
+         "mountpoints": [
+             null
+         ],
+         "children": [
+            {
+               "name": "nvme0n1p1",
+               "maj:min": "259:6",
+               "rm": false,
+               "size": "256M",
+               "ro": false,
+               "type": "part",
+               "mountpoints": [
+                   "/boot/efi"
+               ]
+            },{
+               "name": "nvme0n1p2",
+               "maj:min": "259:7",
+               "rm": false,
+               "size": "32G",
+               "ro": false,
+               "type": "part",
+               "mountpoints": [
+                   null
+               ],
+               "children": [
+                  {
+                     "name": "md0",
+                     "maj:min": "9:0",
+                     "rm": false,
+                     "size": "32G",
+                     "ro": false,
+                     "type": "raid1",
+                     "mountpoints": [
+                         "[SWAP]"
+                     ]
+                  }
+               ]
+            },{
+               "name": "nvme0n1p3",
+               "maj:min": "259:8",
+               "rm": false,
+               "size": "1G",
+               "ro": false,
+               "type": "part",
+               "mountpoints": [
+                   null
+               ],
+               "children": [
+                  {
+                     "name": "md1",
+                     "maj:min": "9:1",
+                     "rm": false,
+                     "size": "1022M",
+                     "ro": false,
+                     "type": "raid1",
+                     "mountpoints": [
+                         "/boot"
+                     ]
+                  }
+               ]
+            },{
+               "name": "nvme0n1p4",
+               "maj:min": "259:9",
+               "rm": false,
+               "size": "920.6G",
+               "ro": false,
+               "type": "part",
+               "mountpoints": [
+                   null
+               ],
+               "children": [
+                  {
+                     "name": "md2",
+                     "maj:min": "9:2",
+                     "rm": false,
+                     "size": "920.5G",
+                     "ro": false,
+                     "type": "raid1",
+                     "mountpoints": [
+                         "/"
+                     ]
+                  }
+               ]
+            }
+         ]
+      }
+   ]
+}

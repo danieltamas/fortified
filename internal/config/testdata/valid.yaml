@@ -1,0 +1,27 @@
+servers:
+  host-2-example:
+    ssh:
+      host: 203.0.113.10
+      port: 15086
+      user: root
+    provider: hetzner
+    destination: host2-backup
+    hetzner:
+      main_account:
+        host: u123456.your-storagebox.de
+        port: 22
+        user: u123456
+      hcloud_token_ref: env://HCLOUD_TOKEN
+    archive:
+      - path: /home
+        glob: "*/docker-compose.yml"
+      - path: /etc/letsencrypt
+    databases:
+      - kind: postgres
+        container: psql
+        dump_strategy: docker-exec
+      - kind: mariadb
+        container: mysql
+        dump_strategy: docker-exec
+        auth_ref: secret://fortified/host-2-example/mariadb-root
+    encryption_key_ref: secret://fortified/host-2-example/borg-passphrase

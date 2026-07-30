@@ -1,0 +1,5 @@
+/bin/
+/fortified
+/fortified-darwin-arm64
+.DS_Store
+/graphify-out/
