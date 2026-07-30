@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/danieltamas/fortified/actions/workflows/ci.yml/badge.svg)](https://github.com/danieltamas/fortified/actions/workflows/ci.yml)
 [![Go Reference](https://img.shields.io/badge/go-1.26-00ADD8?logo=go)](go.mod)
-[![License](https://img.shields.io/badge/license-TBD-lightgrey)](#license)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 `fortified` is a deterministic backup and disaster-recovery CLI for a
 self-hosted server fleet — Docker containers and native/systemd-installed
@@ -459,7 +459,4 @@ SPEC.md and a command described there doesn't appear in
 
 ## License
 
-Not yet chosen — this repo doesn't have a `LICENSE` file, which means, by
-default, no one has permission to use, modify, or redistribute this code.
-That will change before this is meant to be relied on by anyone but its
-author.
+[MIT](LICENSE) — free to use, modify, and redistribute, with attribution.
