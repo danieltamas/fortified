@@ -109,6 +109,23 @@ flowchart LR
 - No Go toolchain is required to *run* fortified once built — see
   [Building](#building) for how it's actually compiled in this repo.
 
+## Installation
+
+Prebuilt, statically-linked binaries (linux/amd64, linux/arm64, darwin/amd64,
+darwin/arm64) are attached to every
+[release](https://github.com/danieltamas/fortified/releases):
+
+```
+curl -L https://github.com/danieltamas/fortified/releases/latest/download/fortified_<version>_<os>_<arch>.tar.gz \
+  | tar -xz fortified
+sudo mv fortified /usr/local/bin/
+```
+
+On macOS, `codesign --sign - --force` the binary first (Apple Silicon refuses
+to run an ad-hoc-unsigned cross-compiled binary otherwise — see
+[Building](#building)). No Go toolchain, Docker, or anything else is required
+to just run it; see below only if you want to build from source.
+
 ## Building
 
 This repo assumes no Go toolchain on the operator's own machine — every
