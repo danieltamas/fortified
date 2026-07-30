@@ -457,6 +457,10 @@ CockroachDB are all supported database engines. If you're looking at
 SPEC.md and a command described there doesn't appear in
 [Commands](#commands) above, it isn't built yet.
 
+## Author
+
+[Daniel Tamas](https://danieltamas.com)
+
 ## License
 
 [MIT](LICENSE) — free to use, modify, and redistribute, with attribution.
