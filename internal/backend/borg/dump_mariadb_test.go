@@ -226,7 +226,7 @@ func TestCreateArchiveWithMariaDB(t *testing.T) {
 	b := Backend{Runner: fake}
 
 	_, manifest, err := b.CreateArchive(context.Background(),
-		"/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", oneMariaDB(), nil, nil, 1000, nil, nil)
+		"/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", oneMariaDB(), nil, nil, nil, 1000, nil, nil)
 	if err != nil {
 		t.Fatalf("CreateArchive: %v", err)
 	}
@@ -254,7 +254,7 @@ func TestCreateArchiveUsesResolvedAuthMap(t *testing.T) {
 
 	_, _, err := b.CreateArchive(context.Background(),
 		"/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", oneMariaDB(),
-		map[string]string{"mysql": "resolved-secret"}, nil, 1000, nil, nil)
+		map[string]string{"mysql": "resolved-secret"}, nil, nil, 1000, nil, nil)
 	if err != nil {
 		t.Fatalf("CreateArchive: %v", err)
 	}

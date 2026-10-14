@@ -46,7 +46,7 @@ func TestPassphraseNeverInArgvOrLogs(t *testing.T) {
 	if err := b.InitRepo(context.Background(), "/repo/x", sentinel, "/identity-key"); err != nil {
 		t.Fatalf("InitRepo: %v", err)
 	}
-	if _, _, err := b.CreateArchive(context.Background(), "/repo/x", sentinel, "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, 1000, nil, nil); err != nil {
+	if _, _, err := b.CreateArchive(context.Background(), "/repo/x", sentinel, "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, nil, 1000, nil, nil); err != nil {
 		t.Fatalf("CreateArchive: %v", err)
 	}
 

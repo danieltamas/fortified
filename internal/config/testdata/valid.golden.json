@@ -11,11 +11,13 @@
       "Archive": [
         {
           "Path": "/home",
-          "Glob": "*/docker-compose.yml"
+          "Glob": "*/docker-compose.yml",
+          "Exclude": null
         },
         {
           "Path": "/etc/letsencrypt",
-          "Glob": ""
+          "Glob": "",
+          "Exclude": null
         }
       ],
       "Databases": [

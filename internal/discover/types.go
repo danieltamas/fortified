@@ -30,15 +30,21 @@ const (
 // verbatim — it must never re-derive a dump command by guessing from
 // a container name at backup time.
 type DatabaseInstance struct {
-	Kind           string       `json:"kind"`
-	Container      string       `json:"container"`
-	Image          string       `json:"image"`
-	Networks       []string     `json:"networks,omitempty"`
-	ExposedPorts   []string     `json:"exposed_ports,omitempty"`
-	DataMountPaths []string     `json:"data_mount_paths,omitempty"`
-	DumpStrategy   DumpStrategy `json:"dump_strategy"`
-	AuthResolved   bool         `json:"auth_resolved"`
-	AuthRef        string       `json:"auth_ref,omitempty"`
+	Kind           string   `json:"kind"`
+	Container      string   `json:"container"`
+	Image          string   `json:"image"`
+	Networks       []string `json:"networks,omitempty"`
+	ExposedPorts   []string `json:"exposed_ports,omitempty"`
+	DataMountPaths []string `json:"data_mount_paths,omitempty"`
+	// DataDir is the host source of the mount holding the engine's own
+	// data directory (e.g. /var/lib/postgresql/data), unlike
+	// DataMountPaths, which lists every mount including config files.
+	// The dump already covers it and a raw copy of a running engine
+	// isn't consistent, so archive proposals exclude exactly this path.
+	DataDir      string       `json:"data_dir,omitempty"`
+	DumpStrategy DumpStrategy `json:"dump_strategy"`
+	AuthResolved bool         `json:"auth_resolved"`
+	AuthRef      string       `json:"auth_ref,omitempty"`
 	// Username is the postgres superuser role/OS-user this container
 	// was actually initialized with, only ever set when it differs
 	// from "postgres" — verified live: the official postgres image,

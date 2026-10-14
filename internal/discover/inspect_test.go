@@ -86,7 +86,7 @@ func TestDiscoverArgv(t *testing.T) {
 		{"btrfs", "filesystem", "show"},
 		{"cat", "/proc/mdstat"},
 		{"docker", "ps", "-a", "--format", "json"},
-		{"find", "/", "-maxdepth", "4", "-iname", "'docker-compose*.yml'"},
+		{"find", "/", "-maxdepth", "4", "'('", "-iname", "'docker-compose*.y*ml'", "-o", "-iname", "'compose.y*ml'", "')'"},
 		{"ss", "-tlnp"},
 		{"iptables", "-S"},
 		{"nft", "list", "ruleset"},

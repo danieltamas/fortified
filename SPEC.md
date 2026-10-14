@@ -275,7 +275,11 @@ this target MUST go through the DB engine, never raw file copy) and must explici
 DB/cache port bound to `0.0.0.0`.
 
 `--emit-config` prints a ready-to-review config stanza (§7) inferred from the discovery: archive
-paths from found compose files, a `DatabaseInstance` entry per detected database with
+paths from found compose files (`docker-compose*.y*ml` and `compose.y*ml`), compose working-dir
+labels, bind mounts and well-known state paths. A database engine's own data directory mount is
+never proposed: it is listed under `exclude:` of the archive path containing it, so the project's
+compose file and engine config are archived while the data the dump covers is not copied raw. A
+`DatabaseInstance` entry per detected database with
 `auth_ref: TODO` wherever auth couldn't be resolved automatically. `onboard` must refuse to
 proceed against a config that still contains an unresolved `TODO` — this is what keeps "minutes
 per server" honest: the operator reviews and fills gaps in generated YAML, they don't
@@ -311,7 +315,12 @@ fortified backup <server> | --all
 ```
 Runs the actual archive step per §4's staged-dump-then-archive ordering (including the free-space
 pre-flight and baseline manifest defined there), into the Borg repo via the append-only key. This
-is what cron calls nightly. `--all` runs every configured server sequentially — per-server locks
+is what cron calls nightly. After the archive is created, `backup` re-scans the target for the
+same archive candidates discover proposes and prints a `warning: not archived: <path>` for each
+one the configured `archive:` list doesn't cover (a glob entry covers only what it matches; an
+`exclude:` uncovers what it names under every entry, since borg applies
+all excludes to the whole run) — a service added after onboard surfaces on the next backup.
+The check is advisory: it never changes the backup's result or exit code. `--all` runs every configured server sequentially — per-server locks
 still apply, one server's failure never stops the others, and it exits non-zero if *any* server
 failed, printing a per-server summary — so one cron entry covers the fleet. Exits non-zero on any failure — this exit
 code is the dead-man-switch hook; wire it to whatever alerting the operator already has (a
@@ -424,6 +433,9 @@ servers:
       - path: /home                 # compose files, configs — discover confirms what's real
         glob: "*/docker-compose.yml"
       - path: /etc/letsencrypt
+      - path: /home/docker/psql     # compose file, pg_hba.conf, postgresql.conf...
+        exclude:                    # ...but not the live data dir the dump covers
+          - /home/docker/psql/data
     databases:
       - kind: postgres
         container: psql

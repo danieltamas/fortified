@@ -19,6 +19,9 @@ servers:
       - path: /home
         glob: "*/docker-compose.yml"   # optional
       - path: /etc/letsencrypt
+      - path: /home/docker/psql
+        exclude:                       # optional — absolute paths strictly under
+          - /home/docker/psql/data     # path, skipped by borg (--exclude pp:)
     databases:
       - kind: postgres
         container: psql
@@ -56,6 +59,12 @@ servers:
   (e.g. reading `MYSQL_ROOT_PASSWORD` from the container's own env).
 - Missing `ssh.host`/`ssh.port`/`ssh.user`/`provider`/`destination` →
   `ErrMissingField`.
+- **`archive[].exclude`** entries must be absolute, clean paths strictly
+  under their own `path` (`ErrInvalidExclude`) — anything else would
+  exclude nothing or drop the whole archive path.
+- An **`archive[].path`** equal to or under any entry's exclude →
+  `ErrExcludedArchivePath`: borg applies every entry's excludes to the
+  whole run, so that entry would archive nothing.
 
 ## Secret references
 

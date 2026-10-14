@@ -48,6 +48,11 @@ type Container struct {
 	State   string `json:"state"`
 	Ports   string `json:"ports,omitempty"`
 	Project string `json:"project,omitempty"`
+	// ProjectDir is the compose project's working directory, from the
+	// container's own com.docker.compose.project.working_dir label —
+	// found even when the compose file sits deeper than the compose
+	// file search reaches.
+	ProjectDir string `json:"project_dir,omitempty"`
 }
 
 // PortBinding is one LISTEN socket from `ss -tlnp`.

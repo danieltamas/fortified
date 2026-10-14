@@ -26,7 +26,7 @@ func EmitConfig(report *Report, target sshx.Target, provider, destination string
 		},
 		Provider:         provider,
 		Destination:      destination,
-		Archive:          archivePaths(report.ComposeFiles, report.KnownStatePaths, report.ContainerBindMounts),
+		Archive:          archiveCandidates(report),
 		Databases:        databaseEntries(report.Databases),
 		EncryptionKeyRef: "TODO",
 	}
@@ -90,7 +90,7 @@ func BuildOrMergeServerConfig(existing *config.Server, report *Report, target ss
 		srv.Destination = dest.Destination
 	}
 	if len(srv.Archive) == 0 {
-		srv.Archive = archivePaths(report.ComposeFiles, report.KnownStatePaths, report.ContainerBindMounts)
+		srv.Archive = archiveCandidates(report)
 	}
 	if len(srv.Databases) == 0 {
 		srv.Databases = databaseEntries(report.Databases)
@@ -118,36 +118,75 @@ func BuildOrMergeServerConfig(existing *config.Server, report *Report, target ss
 // without a nearby compose file (plain `docker run`) has no compose
 // directory to propose, even though its real bind-mount source is
 // exactly as discoverable via `docker inspect` (verified live).
-func archivePaths(composeFiles, knownStatePaths, containerBindMounts []string) []config.ArchivePath {
+//
+// projectDirs (compose working-dir labels) are proposed like compose
+// file directories. dataDirs are database engines' live data
+// directories: never proposed themselves, and excluded from whichever
+// proposed path contains them, so a database's compose project — its
+// compose file, engine config, auth files — is archived while the data
+// the engine dump already covers is not copied raw.
+func archivePaths(composeFiles, projectDirs, knownStatePaths, containerBindMounts, dataDirs []string) []config.ArchivePath {
 	seen := make(map[string]bool)
 	var dirs []string
+	add := func(p string) {
+		if seen[p] || underAny(p, dataDirs) {
+			return
+		}
+		seen[p] = true
+		dirs = append(dirs, p)
+	}
 	for _, f := range composeFiles {
-		dir := filepath.Dir(f)
-		if !seen[dir] {
-			seen[dir] = true
-			dirs = append(dirs, dir)
-		}
+		add(filepath.Dir(f))
 	}
-	for _, p := range knownStatePaths {
-		if !seen[p] {
-			seen[p] = true
-			dirs = append(dirs, p)
-		}
-	}
-	for _, p := range containerBindMounts {
-		if !seen[p] {
-			seen[p] = true
-			dirs = append(dirs, p)
+	for _, group := range [][]string{projectDirs, knownStatePaths, containerBindMounts} {
+		for _, p := range group {
+			add(p)
 		}
 	}
 	sort.Strings(dirs)
 	dirs = dropSubpaths(dirs)
 
+	sortedDataDirs := append([]string(nil), dataDirs...)
+	sort.Strings(sortedDataDirs)
 	paths := make([]config.ArchivePath, 0, len(dirs))
 	for _, d := range dirs {
-		paths = append(paths, config.ArchivePath{Path: d})
+		ap := config.ArchivePath{Path: d}
+		for _, dd := range sortedDataDirs {
+			if dd != d && underAny(dd, []string{d}) {
+				ap.Exclude = append(ap.Exclude, dd)
+			}
+		}
+		paths = append(paths, ap)
 	}
 	return paths
+}
+
+// archiveCandidates is archivePaths over everything report found —
+// the one candidate list both discover's proposal and backup's
+// coverage check (UncoveredPaths) are built from.
+func archiveCandidates(report *Report) []config.ArchivePath {
+	var projectDirs, dataDirs []string
+	for _, c := range report.Containers {
+		if c.ProjectDir != "" {
+			projectDirs = append(projectDirs, c.ProjectDir)
+		}
+	}
+	for _, db := range report.Databases {
+		if db.DataDir != "" {
+			dataDirs = append(dataDirs, db.DataDir)
+		}
+	}
+	return archivePaths(report.ComposeFiles, projectDirs, report.KnownStatePaths, report.ContainerBindMounts, dataDirs)
+}
+
+// underAny reports whether p equals or sits under any of parents.
+func underAny(p string, parents []string) bool {
+	for _, parent := range parents {
+		if p == parent || strings.HasPrefix(p, strings.TrimSuffix(parent, "/")+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // dropSubpaths removes any path already covered by a shorter path

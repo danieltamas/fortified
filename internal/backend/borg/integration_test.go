@@ -35,7 +35,7 @@ func TestBorgLifecycleLocal(t *testing.T) {
 
 	workspaceDir := filepath.Join(t.TempDir(), "workspace")
 	archiveID, manifest, err := b.CreateArchive(ctx, repoDir, passphrase, "", workspaceDir, "test-archive",
-		nil, nil, []string{fixtureDir}, 1000, nil, nil)
+		nil, nil, []string{fixtureDir}, nil, 1000, nil, nil)
 	if err != nil {
 		t.Fatalf("CreateArchive: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestAppendOnlyLocalBehavior(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 	workspaceDir := filepath.Join(t.TempDir(), "workspace")
-	archiveID, _, err := b.CreateArchive(ctx, repoDir, passphrase, "", workspaceDir, "keep-me", nil, nil, []string{fixtureDir}, 1000, nil, nil)
+	archiveID, _, err := b.CreateArchive(ctx, repoDir, passphrase, "", workspaceDir, "keep-me", nil, nil, []string{fixtureDir}, nil, 1000, nil, nil)
 	if err != nil {
 		t.Fatalf("CreateArchive: %v", err)
 	}
@@ -154,7 +154,7 @@ func TestPostgresDumpRestoreRoundTrip(t *testing.T) {
 	}
 	workspaceDir := filepath.Join(t.TempDir(), "workspace")
 	archiveID, manifest, err := b.CreateArchive(ctx, repoDir, "pw", "", workspaceDir, "pg-roundtrip",
-		[]discover.DatabaseInstance{postgresRecipe(source)}, nil, nil, 0, nil, nil)
+		[]discover.DatabaseInstance{postgresRecipe(source)}, nil, nil, nil, 0, nil, nil)
 	if err != nil {
 		t.Fatalf("CreateArchive: %v", err)
 	}
@@ -219,7 +219,7 @@ func TestMariaDBDumpRestoreRoundTrip(t *testing.T) {
 	}
 	workspaceDir := filepath.Join(t.TempDir(), "workspace")
 	archiveID, manifest, err := b.CreateArchive(ctx, repoDir, "pw", "", workspaceDir, "maria-roundtrip",
-		[]discover.DatabaseInstance{mariaDBRecipe(source)}, nil, nil, 0, nil, nil)
+		[]discover.DatabaseInstance{mariaDBRecipe(source)}, nil, nil, nil, 0, nil, nil)
 	if err != nil {
 		t.Fatalf("CreateArchive: %v", err)
 	}

@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -19,6 +20,16 @@ var ErrPlaintextSecret = errors.New("config: expected a secret reference (env://
 
 // ErrMissingField means a required field was empty.
 var ErrMissingField = errors.New("config: missing required field")
+
+// ErrInvalidExclude means an archive exclude isn't an absolute path
+// strictly under its own archive path — anything else would either
+// exclude nothing or silently drop the whole archive path.
+var ErrInvalidExclude = errors.New("config: archive exclude must be an absolute path strictly under its archive path")
+
+// ErrExcludedArchivePath means an archive path sits at or under an
+// exclude of another entry. borg applies every exclude to the whole
+// run, so that entry would silently archive nothing.
+var ErrExcludedArchivePath = errors.New("config: archive path is excluded by an archive exclude (excludes apply to every entry)")
 
 // Validate checks fleet for unresolved TODO placeholders, missing
 // required fields, and plaintext secrets — the same check Load runs
@@ -69,6 +80,24 @@ func validateServer(id string, srv Server) error {
 		return fmt.Errorf("%s.encryption_key_ref: %w", prefix, ErrPlaintextSecret)
 	}
 
+	for i, a := range srv.Archive {
+		for j, ex := range a.Exclude {
+			if !isStrictlyUnder(ex, a.Path) {
+				return fmt.Errorf("%s.archive[%d].exclude[%d] %q: %w", prefix, i, j, ex, ErrInvalidExclude)
+			}
+		}
+	}
+	for i, a := range srv.Archive {
+		path := filepath.Clean(a.Path)
+		for _, other := range srv.Archive {
+			for _, ex := range other.Exclude {
+				if path == ex || isStrictlyUnder(path, ex) {
+					return fmt.Errorf("%s.archive[%d].path %q under exclude %q: %w", prefix, i, a.Path, ex, ErrExcludedArchivePath)
+				}
+			}
+		}
+	}
+
 	for i, db := range srv.Databases {
 		if db.AuthRef != "" && !isSecretRef(db.AuthRef) {
 			return fmt.Errorf("%s.databases[%d].auth_ref: %w", prefix, i, ErrPlaintextSecret)
@@ -81,6 +110,16 @@ func validateServer(id string, srv Server) error {
 		}
 	}
 	return nil
+}
+
+// isStrictlyUnder reports whether path is an absolute, already-clean
+// path inside parent (never parent itself).
+func isStrictlyUnder(path, parent string) bool {
+	parent = filepath.Clean(parent)
+	if !filepath.IsAbs(path) || filepath.Clean(path) != path || path == parent {
+		return false
+	}
+	return strings.HasPrefix(path, strings.TrimSuffix(parent, "/")+"/")
 }
 
 func validateHetznerConfig(prefix string, cfg *HetznerConfig) error {

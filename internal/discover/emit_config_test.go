@@ -128,7 +128,7 @@ func TestArchivePathsDropsPathsAlreadyCoveredByAParent(t *testing.T) {
 		"/home/redis-stack/data",             // NOT covered by anything — must survive
 	}
 
-	got := archivePaths(composeFiles, knownStatePaths, bindMounts)
+	got := archivePaths(composeFiles, nil, knownStatePaths, bindMounts, nil)
 
 	var paths []string
 	for _, p := range got {

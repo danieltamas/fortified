@@ -46,6 +46,12 @@ func TestEndToEndOnboardBackupVerifyEnableSnapshots(t *testing.T) {
 		sshxtest.Response{}, // writeManifest
 		sshxtest.Response{}, // borg create
 		sshxtest.Response{}, // rm -rf workspace
+		// --- backup's archive coverage scan: docker ps, compose search,
+		// custom systemd units + 11 well-known-state-path checks
+		// (no containers, so no docker inspect) ---
+		sshxtest.Response{}, sshxtest.Response{}, sshxtest.Response{}, sshxtest.Response{}, sshxtest.Response{},
+		sshxtest.Response{}, sshxtest.Response{}, sshxtest.Response{}, sshxtest.Response{}, sshxtest.Response{},
+		sshxtest.Response{}, sshxtest.Response{}, sshxtest.Response{}, sshxtest.Response{},
 		// --- verify ---
 		sshxtest.Response{Result: sshx.Result{Stdout: "2026-07-18T00-00-00Z\n"}},    // borg list
 		sshxtest.Response{Result: sshx.Result{Stdout: verifyTestDumpSizeJSONLines}}, // borg list --json-lines (workspace dump size for the free-space preflight)
@@ -119,14 +125,14 @@ func TestEndToEndOnboardBackupVerifyEnableSnapshots(t *testing.T) {
 	// checks + 7 native-database probes) + 1 (step 2's own borg
 	// --version check) + 6 (step 4 key install) + 3 (step 5: read
 	// pubkey, init, verify append-only restored) = 44 from onboard,
-	// then 5 from backup, then 7 from verify (list, borg list
+	// then 5 from backup plus 14 from its archive coverage scan, then 7 from verify (list, borg list
 	// --json-lines for the free-space preflight's workspace-dump-size
 	// estimate, df, mkdir scratch dir, pwd to resolve
 	// automationKeyPath to an absolute path before RestoreArchive's
 	// own Dir changes cwd, then extract) — enable-snapshots touches
 	// only the hcloud fake transport, not the target runner.
-	if len(target.Calls) != 56 {
-		t.Fatalf("target transcript has %d calls, want 56 (44 onboard + 5 backup + 7 verify): %+v",
+	if len(target.Calls) != 70 {
+		t.Fatalf("target transcript has %d calls, want 70 (44 onboard + 5 backup + 14 coverage scan + 7 verify): %+v",
 			len(target.Calls), target.Calls)
 	}
 	if len(storageBox.Calls) != 6 {
@@ -145,8 +151,8 @@ func TestEndToEndOnboardBackupVerifyEnableSnapshots(t *testing.T) {
 	if backupCreateCall.Cmd != "borg" || backupCreateCall.Args[0] != "create" {
 		t.Errorf("call 47 = %q %v, want borg create ... (backup)", backupCreateCall.Cmd, backupCreateCall.Args)
 	}
-	verifyExtractCall := target.Calls[54]
+	verifyExtractCall := target.Calls[68]
 	if verifyExtractCall.Cmd != "borg" || verifyExtractCall.Args[0] != "extract" {
-		t.Errorf("call 53 = %q %v, want borg extract ... (verify)", verifyExtractCall.Cmd, verifyExtractCall.Args)
+		t.Errorf("call 68 = %q %v, want borg extract ... (verify)", verifyExtractCall.Cmd, verifyExtractCall.Args)
 	}
 }

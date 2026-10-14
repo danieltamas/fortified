@@ -153,7 +153,7 @@ func TestPreflightEstimateRefusesBeforeDump(t *testing.T) {
 	}}
 	b := Backend{Runner: fake}
 	dbs := []discover.DatabaseInstance{{Kind: "postgres", Container: "pg", DumpStrategy: discover.DumpStrategyDockerExec, AuthResolved: true}}
-	_, _, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity", "/work/backup", "archive", dbs, nil, nil, 0, nil, nil)
+	_, _, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity", "/work/backup", "archive", dbs, nil, nil, nil, 0, nil, nil)
 	assertEstimateDecision(t, err, true)
 	if len(fake.Calls) != 4 {
 		t.Fatalf("insufficient space must stop after estimates and df, got %+v", fake.Calls)
@@ -180,7 +180,7 @@ func TestPreflightEstimateErrorsStopBeforeDump(t *testing.T) {
 			fake := &sshxtest.FakeRunner{Responses: tc.responses}
 			b := Backend{Runner: fake}
 			dbs := []discover.DatabaseInstance{{Kind: "postgres", Container: "pg", DumpStrategy: discover.DumpStrategyDockerExec, AuthResolved: true}}
-			_, _, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity", "/work/backup", "archive", dbs, nil, nil, 0, nil, nil)
+			_, _, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity", "/work/backup", "archive", dbs, nil, nil, nil, 0, nil, nil)
 			if err == nil {
 				t.Fatal("an unknown estimate must fail closed")
 			}

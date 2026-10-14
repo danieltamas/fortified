@@ -34,21 +34,21 @@ func parseDockerPS(cap *Capture) ([]Container, error) {
 			return nil, fmt.Errorf("discover: parse docker ps line %q: %w", line, err)
 		}
 		containers = append(containers, Container{
-			Name:    entry.Names,
-			Image:   entry.Image,
-			State:   entry.State,
-			Ports:   entry.Ports,
-			Project: composeProjectLabel(entry.Labels),
+			Name:       entry.Names,
+			Image:      entry.Image,
+			State:      entry.State,
+			Ports:      entry.Ports,
+			Project:    composeLabel(entry.Labels, "com.docker.compose.project"),
+			ProjectDir: composeLabel(entry.Labels, "com.docker.compose.project.working_dir"),
 		})
 	}
 	return containers, nil
 }
 
-// composeProjectLabel extracts com.docker.compose.project from
-// docker's comma-joined Labels string.
-func composeProjectLabel(labels string) string {
+// composeLabel extracts label from docker's comma-joined Labels string.
+func composeLabel(labels, label string) string {
 	for _, kv := range strings.Split(labels, ",") {
-		if name, value, found := strings.Cut(kv, "="); found && name == "com.docker.compose.project" {
+		if name, value, found := strings.Cut(kv, "="); found && name == label {
 			return value
 		}
 	}

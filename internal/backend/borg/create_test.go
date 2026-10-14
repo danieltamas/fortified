@@ -41,7 +41,7 @@ func TestCreateArchiveReportsProgressPerDatabaseAndArchive(t *testing.T) {
 	progress := func(msg string) { messages = append(messages, msg) }
 
 	if _, _, err := b.CreateArchive(context.Background(),
-		"/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, 1000, progress, nil); err != nil {
+		"/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, nil, 1000, progress, nil); err != nil {
 		t.Fatalf("CreateArchive: %v", err)
 	}
 
@@ -75,7 +75,7 @@ func TestCreateArchiveStreamsLiveOutput(t *testing.T) {
 	b := Backend{Runner: fake}
 
 	if _, _, err := b.CreateArchive(context.Background(),
-		"/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, 1000, nil, &strings.Builder{}); err != nil {
+		"/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, nil, 1000, nil, &strings.Builder{}); err != nil {
 		t.Fatalf("CreateArchive: %v", err)
 	}
 	// No assertion beyond "it didn't panic/error" is needed here:
@@ -112,7 +112,7 @@ func TestCreateArchiveHappyPathAndManifestContents(t *testing.T) {
 
 	archiveID, manifest, err := b.CreateArchive(context.Background(),
 		"/repo/host-2-example", "pw", "/identity-key", "/work/host-2-example", "2026-07-18",
-		onePostgresDB(), nil, []string{"/home/docker/psql/docker-compose.yml"}, 1000, nil, nil)
+		onePostgresDB(), nil, []string{"/home/docker/psql/docker-compose.yml"}, nil, 1000, nil, nil)
 	if err != nil {
 		t.Fatalf("CreateArchive: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestCreateAbortsOnDumpFailure(t *testing.T) {
 
 	_, _, err := b.CreateArchive(context.Background(),
 		"/repo/host-2-example", "pw", "/identity-key", "/work/host-2-example", "2026-07-18",
-		onePostgresDB(), nil, nil, 1000, nil, nil)
+		onePostgresDB(), nil, nil, nil, 1000, nil, nil)
 	if err == nil {
 		t.Fatal("expected CreateArchive to fail when a dump fails")
 	}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/danieltamas/fortified/internal/backend/borg"
+	"github.com/danieltamas/fortified/internal/discover"
 	"github.com/danieltamas/fortified/internal/sshx"
 	"github.com/danieltamas/fortified/internal/state"
 )
@@ -65,14 +66,14 @@ func Backup(ctx context.Context, d Deps) error {
 	}
 
 	var resolvedAuth map[string]string
-	var sourcePaths []string
+	var sourcePaths, excludes []string
 	if err := withProgress(d, "resolving database auth and archive paths", func() error {
 		var err error
 		resolvedAuth, err = resolveAuthRefs(ctx, d)
 		if err != nil {
 			return err
 		}
-		sourcePaths, err = resolveArchiveSourcePaths(ctx, d)
+		sourcePaths, excludes, err = resolveArchiveSourcePaths(ctx, d)
 		return err
 	}); err != nil {
 		return fmt.Errorf("backup: %w", err)
@@ -86,7 +87,7 @@ func Backup(ctx context.Context, d Deps) error {
 	if err := withProgress(d, label, func() error {
 		var err error
 		_, manifest, err = d.Backend.CreateArchive(ctx, repoPath, passphrase, automationKeyPath, workspaceDir, archiveName,
-			st.Databases, resolvedAuth, sourcePaths, 0, d.Progress, d.LiveOutput)
+			st.Databases, resolvedAuth, sourcePaths, excludes, 0, d.Progress, d.LiveOutput)
 		return err
 	}); err != nil {
 		return fmt.Errorf("backup: %w", err)
@@ -98,7 +99,25 @@ func Backup(ctx context.Context, d Deps) error {
 	if err := state.Save(d.StateDir, st); err != nil {
 		return fmt.Errorf("backup: save state: %w", err)
 	}
+	reportArchiveCoverage(ctx, d)
 	return nil
+}
+
+// reportArchiveCoverage warns about every path discover would propose
+// that the archive list doesn't cover — a service added after onboard,
+// or a database's compose project left out — so a gap surfaces on the
+// next backup instead of at restore time. Advisory only: it runs after
+// the archive is safely created, and no outcome of it (including the
+// scan itself failing) changes the backup's result.
+func reportArchiveCoverage(ctx context.Context, d Deps) {
+	candidates, err := discover.ScanArchiveCandidates(ctx, d.Target)
+	if err != nil {
+		d.reportProgress("warning: archive coverage check failed: %v", err)
+		return
+	}
+	for _, p := range discover.UncoveredPaths(candidates, d.Server.Archive) {
+		d.reportProgress("warning: not archived: %s — add it to archive: in fleet.yaml (fortified settings) if it holds anything worth restoring", p)
+	}
 }
 
 // toStateManifest copies a borg.Manifest into state's own Manifest
@@ -144,9 +163,10 @@ func resolveAuthRefs(ctx context.Context, d Deps) (map[string]string, error) {
 // never echoes anything when the pattern matches nothing — so a
 // non-nil error here is always a genuine failure, never "no matches",
 // and now propagates instead of being swallowed.
-func resolveArchiveSourcePaths(ctx context.Context, d Deps) ([]string, error) {
+func resolveArchiveSourcePaths(ctx context.Context, d Deps) (sources, excludes []string, err error) {
 	var resolved []string
 	for _, p := range d.Server.Archive {
+		excludes = append(excludes, p.Exclude...)
 		if p.Glob == "" {
 			resolved = append(resolved, p.Path)
 			continue
@@ -161,17 +181,17 @@ func resolveArchiveSourcePaths(ctx context.Context, d Deps) ([]string, error) {
 		// stray ";" or backtick in fleet.yaml running arbitrary
 		// commands on the target) without breaking real globs.
 		if err := validateGlobIsShellSafe(p.Glob); err != nil {
-			return nil, fmt.Errorf("archive path %s: glob %q: %w", p.Path, p.Glob, err)
+			return nil, nil, fmt.Errorf("archive path %s: glob %q: %w", p.Path, p.Glob, err)
 		}
 		pattern := shellSingleQuote(p.Path) + "/" + p.Glob
 		script := fmt.Sprintf(`for f in %s; do [ -e "$f" ] && echo "$f"; done`, pattern)
 		result, err := d.Target.Run(ctx, sshx.ReadOnly, "sh", []string{"-c", script}, sshx.RunOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("expand archive glob %q: %w", pattern, err)
+			return nil, nil, fmt.Errorf("expand archive glob %q: %w", pattern, err)
 		}
 		resolved = append(resolved, splitNonEmptyLines(result.Stdout)...)
 	}
-	return resolved, nil
+	return resolved, excludes, nil
 }
 
 // validateGlobIsShellSafe rejects any character outside the standard

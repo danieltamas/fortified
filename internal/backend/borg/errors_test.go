@@ -224,7 +224,7 @@ func TestCreateArchiveMkdirFailure(t *testing.T) {
 		{Err: errBoom},
 	}}
 	b := Backend{Runner: fake}
-	if _, _, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, 1000, nil, nil); err == nil {
+	if _, _, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, nil, 1000, nil, nil); err == nil {
 		t.Fatal("expected CreateArchive to fail when workspace creation fails")
 	}
 }
@@ -244,7 +244,7 @@ func TestCreateArchiveBorgCreateFailureCleansUpWorkspace(t *testing.T) {
 		},
 	}
 	b := Backend{Runner: fake}
-	if _, _, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, 1000, nil, nil); err == nil {
+	if _, _, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, nil, 1000, nil, nil); err == nil {
 		t.Fatal("expected CreateArchive to fail when borg create fails")
 	}
 	if len(fake.Calls) != 9 {
@@ -284,7 +284,7 @@ func TestCreateArchiveTreatsBorgCreateExitCodeOneAsWarningNotFailure(t *testing.
 	var messages []string
 	progress := func(msg string) { messages = append(messages, msg) }
 
-	archiveID, manifest, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, 1000, progress, nil)
+	archiveID, manifest, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, nil, 1000, progress, nil)
 	if err != nil {
 		t.Fatalf("CreateArchive: %v, want it to succeed despite borg create's exit-1 warning", err)
 	}
@@ -320,7 +320,7 @@ func TestCreateArchiveStillFailsOnBorgCreateGenuineError(t *testing.T) {
 		},
 	}
 	b := Backend{Runner: fake}
-	if _, _, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, 1000, nil, nil); err == nil {
+	if _, _, err := b.CreateArchive(context.Background(), "/repo/x", "pw", "/identity-key", "/work/x", "2026-07-18", onePostgresDB(), nil, nil, nil, 1000, nil, nil); err == nil {
 		t.Fatal("expected CreateArchive to fail on a genuine (exit 2) borg create error")
 	}
 }

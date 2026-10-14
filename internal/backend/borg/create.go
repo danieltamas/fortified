@@ -26,7 +26,8 @@ import (
 // by the caller via internal/secrets — SPEC.md §3); a database absent
 // from this map falls back to its own container env. sourcePaths are
 // host-level paths (compose files, TLS certs, etc.) archived alongside
-// the dumps. lastRunTotalDumpSize feeds the free-space pre-flight
+// the dumps; excludes are absolute paths under them that borg skips
+// (fleet.yaml's archive[].exclude). lastRunTotalDumpSize feeds the free-space pre-flight
 // (0 means "first run").
 //
 // progress, if non-nil, is called with a start/done line around each
@@ -48,6 +49,7 @@ func (b Backend) CreateArchive(
 	databases []discover.DatabaseInstance,
 	resolvedAuth map[string]string,
 	sourcePaths []string,
+	excludes []string,
 	lastRunTotalDumpSize int64,
 	progress func(string),
 	liveOutput io.Writer,
@@ -86,7 +88,14 @@ func (b Backend) CreateArchive(
 
 	archivePaths := append([]string{workspaceDir}, sourcePaths...)
 	archiveSpec := fmt.Sprintf("%s::%s", repoPath, archiveName)
-	args := append([]string{"create", "--progress", "--stats", archiveSpec}, archivePaths...)
+	args := []string{"create", "--progress", "--stats"}
+	for _, ex := range excludes {
+		// pp: is borg's path-prefix pattern: it matches ex and
+		// everything under it, never a sibling that merely shares the
+		// name as a prefix the way a bare fnmatch pattern could.
+		args = append(args, "--exclude", "pp:"+ex)
+	}
+	args = append(append(args, archiveSpec), archivePaths...)
 	if progress != nil {
 		progress("creating archive " + archiveName)
 	}

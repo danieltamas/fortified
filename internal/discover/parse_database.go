@@ -27,6 +27,40 @@ type dockerInspectEntry struct {
 	} `json:"NetworkSettings"`
 }
 
+// engineDataDirSource returns the host source of the mount that holds
+// kind's data directory inside entry, or "" when no mount does. The
+// mount may be the directory itself or a parent of it: postgres 18+
+// images mount /var/lib/postgresql with PGDATA below it.
+func engineDataDirSource(kind string, entry dockerInspectEntry) string {
+	var dataDir string
+	switch kind {
+	case "postgres":
+		dataDir = "/var/lib/postgresql/data"
+		for _, e := range entry.Config.Env {
+			if name, value, found := strings.Cut(e, "="); found && name == "PGDATA" && value != "" {
+				dataDir = value
+			}
+		}
+	case "mariadb":
+		dataDir = "/var/lib/mysql"
+	case "cockroachdb":
+		dataDir = "/cockroach/cockroach-data"
+	default:
+		return ""
+	}
+	var source, bestDest string
+	for _, m := range entry.Mounts {
+		dest := strings.TrimSuffix(m.Destination, "/")
+		if m.Source == "" || (dataDir != dest && !strings.HasPrefix(dataDir, dest+"/")) {
+			continue
+		}
+		if len(dest) > len(bestDest) {
+			source, bestDest = m.Source, dest
+		}
+	}
+	return source
+}
+
 // engineKind classifies a container's Kind from its image, or ""
 // if it isn't a database engine discover knows how to dump.
 func engineKind(image string) string {
@@ -195,6 +229,7 @@ func classifyDatabases(containers []Container, cap *Capture) ([]DatabaseInstance
 			Networks:       networks,
 			ExposedPorts:   ports,
 			DataMountPaths: dataMounts,
+			DataDir:        engineDataDirSource(kind, entry),
 			DumpStrategy:   DumpStrategyDockerExec,
 			AuthResolved:   authResolved,
 			Username:       username,

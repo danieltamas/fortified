@@ -28,7 +28,11 @@ var readOnlyCommands = []readOnlyCommand{
 	{cmdBtrfsFilesystem, "checking Btrfs filesystems (btrfs filesystem show)", "btrfs", []string{"filesystem", "show"}},
 	{cmdProcMdstat, "checking software RAID (/proc/mdstat)", "cat", []string{"/proc/mdstat"}},
 	{cmdDockerPS, "listing containers (docker ps)", "docker", []string{"ps", "-a", "--format", "json"}},
-	{cmdDockerComposeFiles, "finding docker-compose files", "find", []string{"/", "-maxdepth", "4", "-iname", "docker-compose*.yml"}},
+	// compose.yaml/compose.yml are Compose v2's preferred names and
+	// .yaml is as valid as .yml — matching only docker-compose*.yml
+	// silently missed every project created on current defaults.
+	{cmdDockerComposeFiles, "finding docker-compose files", "find", []string{"/", "-maxdepth", "4",
+		"(", "-iname", "docker-compose*.y*ml", "-o", "-iname", "compose.y*ml", ")"}},
 	{cmdSSTlnp, "checking listening sockets (ss -tlnp)", "ss", []string{"-tlnp"}},
 	{cmdIptablesS, "checking iptables rules", "iptables", []string{"-S"}},
 	{cmdNftRuleset, "checking nftables ruleset", "nft", []string{"list", "ruleset"}},

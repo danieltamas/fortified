@@ -19,56 +19,64 @@
       "image": "img-exampleapi-backend",
       "state": "running",
       "ports": "127.0.0.1:5601-\u003e5601/tcp",
-      "project": "exampleapi"
+      "project": "exampleapi",
+      "project_dir": "/home/operator/exampleapi/docker"
     },
     {
       "name": "exampleapi-client-backend",
       "image": "img-exampleapi-backend",
       "state": "running",
       "ports": "127.0.0.1:5602-\u003e5602/tcp",
-      "project": "exampleapi"
+      "project": "exampleapi",
+      "project_dir": "/home/operator/exampleapi/docker"
     },
     {
       "name": "exampleapi-admin-backend",
       "image": "img-exampleapi-backend",
       "state": "running",
       "ports": "127.0.0.1:5603-\u003e5603/tcp",
-      "project": "exampleapi"
+      "project": "exampleapi",
+      "project_dir": "/home/operator/exampleapi/docker"
     },
     {
       "name": "exampledb",
       "image": "img-exampledb",
       "state": "running",
       "ports": "127.0.0.1:5555-\u003e5555/tcp",
-      "project": "exampledb"
+      "project": "exampledb",
+      "project_dir": "/home/operator/exampledb"
     },
     {
       "name": "applex-n8n-errors",
       "image": "dozzle-n8n-host-example-applex-n8n-errors",
       "state": "running",
       "ports": "100.106.175.62:9111-\u003e9111/tcp",
-      "project": "dozzle-n8n-host-example"
+      "project": "dozzle-n8n-host-example",
+      "project_dir": "/home/dozzle-n8n-host-example"
     },
     {
       "name": "applex",
       "image": "img-applex",
       "state": "running",
       "ports": "127.0.0.1:3899-\u003e3899/tcp",
-      "project": "applex"
+      "project": "applex",
+      "project_dir": "/home/example/applex"
     },
     {
       "name": "dozzle-dev",
       "image": "amir20/dozzle:latest",
       "state": "running",
       "ports": "127.0.0.1:8081-\u003e8080/tcp",
-      "project": "dozzle-secondary"
+      "project": "dozzle-secondary",
+      "project_dir": "/home/dozzle-secondary"
     },
     {
       "name": "dozzle",
       "image": "amir20/dozzle:latest",
       "state": "running",
       "ports": "127.0.0.1:8080-\u003e8080/tcp",
-      "project": "dozzle"
+      "project": "dozzle",
+      "project_dir": "/home/dozzle"
     },
     {
       "name": "quizzical_mirzakhani",
@@ -80,14 +88,16 @@
       "image": "img-example",
       "state": "running",
       "ports": "127.0.0.1:3002-\u003e3000/tcp",
-      "project": "example-eu"
+      "project": "example-eu",
+      "project_dir": "/home/example/example.com"
     },
     {
       "name": "apppiroi",
       "image": "img-apppiroi",
       "state": "running",
       "ports": "127.0.0.1:7000-\u003e7000/tcp",
-      "project": "apppiroi"
+      "project": "apppiroi",
+      "project_dir": "/home/operator/apppiroi/mcp"
     },
     {
       "name": "nginx",
@@ -106,132 +116,151 @@
       "image": "psql-pgbouncer",
       "state": "running",
       "ports": "127.0.0.1:6432-\u003e6432/tcp",
-      "project": "psql"
+      "project": "psql",
+      "project_dir": "/home/docker/psql"
     },
     {
       "name": "psql",
       "image": "postgres:17-bookworm",
       "state": "running",
       "ports": "127.0.0.1:5432-\u003e5432/tcp",
-      "project": "psql"
+      "project": "psql",
+      "project_dir": "/home/docker/psql"
     },
     {
       "name": "n8n",
       "image": "n8n-n8n",
       "state": "running",
       "ports": "127.0.0.1:5688-\u003e5678/tcp",
-      "project": "n8n"
+      "project": "n8n",
+      "project_dir": "/home/docker/n8n"
     },
     {
       "name": "browserless",
       "image": "browserless/chrome",
       "state": "running",
       "ports": "3000/tcp",
-      "project": "n8n"
+      "project": "n8n",
+      "project_dir": "/home/docker/n8n"
     },
     {
       "name": "sftp-server",
       "image": "atmoz/sftp",
       "state": "exited",
-      "project": "sftp"
+      "project": "sftp",
+      "project_dir": "/home/docker/sftp"
     },
     {
       "name": "php-fpm-clientb",
       "image": "custom-php-fpm-7",
       "state": "running",
       "ports": "127.0.0.1:9003-\u003e9000/tcp",
-      "project": "nginx"
+      "project": "nginx",
+      "project_dir": "/home/docker/nginx"
     },
     {
       "name": "php-fpm-clienta",
       "image": "custom-php-fpm-7",
       "state": "running",
       "ports": "127.0.0.1:9004-\u003e9000/tcp",
-      "project": "nginx"
+      "project": "nginx",
+      "project_dir": "/home/docker/nginx"
     },
     {
       "name": "php-fpm-clientc",
       "image": "custom-php-fpm-7",
       "state": "running",
       "ports": "127.0.0.1:9001-\u003e9000/tcp",
-      "project": "nginx"
+      "project": "nginx",
+      "project_dir": "/home/docker/nginx"
     },
     {
       "name": "php-fpm-clientd",
       "image": "custom-php-fpm-7",
       "state": "running",
       "ports": "127.0.0.1:9005-\u003e9000/tcp",
-      "project": "nginx"
+      "project": "nginx",
+      "project_dir": "/home/docker/nginx"
     },
     {
       "name": "php-fpm-sandbox",
       "image": "custom-php-fpm-7",
       "state": "running",
       "ports": "127.0.0.1:9006-\u003e9000/tcp",
-      "project": "nginx"
+      "project": "nginx",
+      "project_dir": "/home/docker/nginx"
     },
     {
       "name": "php-fpm-cliente",
       "image": "custom-php-fpm-7",
       "state": "running",
       "ports": "127.0.0.1:9007-\u003e9000/tcp",
-      "project": "nginx"
+      "project": "nginx",
+      "project_dir": "/home/docker/nginx"
     },
     {
       "name": "php-fpm-clientf",
       "image": "custom-php-fpm-7",
       "state": "running",
       "ports": "127.0.0.1:9011-\u003e9000/tcp",
-      "project": "nginx"
+      "project": "nginx",
+      "project_dir": "/home/docker/nginx"
     },
     {
       "name": "php-fpm-clientg",
       "image": "custom-php-fpm-7",
       "state": "running",
       "ports": "127.0.0.1:9002-\u003e9000/tcp",
-      "project": "nginx"
+      "project": "nginx",
+      "project_dir": "/home/docker/nginx"
     },
     {
       "name": "php-fpm-clienth",
       "image": "custom-php-fpm-7",
       "state": "running",
       "ports": "127.0.0.1:9010-\u003e9000/tcp",
-      "project": "nginx"
+      "project": "nginx",
+      "project_dir": "/home/docker/nginx"
     },
     {
       "name": "php-fpm-clienti",
       "image": "custom-php-fpm-7",
       "state": "running",
       "ports": "127.0.0.1:9008-\u003e9000/tcp",
-      "project": "nginx"
+      "project": "nginx",
+      "project_dir": "/home/docker/nginx"
     },
     {
       "name": "php-fpm-clientj",
       "image": "custom-php-fpm-7",
       "state": "running",
       "ports": "127.0.0.1:9009-\u003e9000/tcp",
-      "project": "nginx"
+      "project": "nginx",
+      "project_dir": "/home/docker/nginx"
     },
     {
       "name": "example-ai-api",
       "image": "img-example-ai-api",
       "state": "running",
       "ports": "0.0.0.0:3030-\u003e8000/tcp, [::]:3030-\u003e8000/tcp",
-      "project": "aiapi"
+      "project": "aiapi",
+      "project_dir": "/home/example/ai-api"
     },
     {
       "name": "mysql",
       "image": "mariadb:10.4",
       "state": "running",
       "ports": "127.0.0.1:3306-\u003e3306/tcp",
-      "project": "mysql"
+      "project": "mysql",
+      "project_dir": "/home/docker/mysql"
     },
     {
       "name": "redis-stack",
       "image": "redis/redis-stack-server:latest",
       "state": "running",
       "ports": "127.0.0.1:6379-\u003e6379/tcp",
-      "project": "redis-stack"
+      "project": "redis-stack",
+      "project_dir": "/home/docker/redis-stack"
     }
   ],
   "compose_files": [
@@ -262,6 +291,7 @@
         "/home/docker/mysql/dumps",
         "/home/docker/mysql/mysql-data"
       ],
+      "data_dir": "/home/docker/mysql/mysql-data",
       "dump_strategy": "docker-exec",
       "auth_resolved": true
     },
@@ -282,6 +312,7 @@
         "/home/docker/psql/pg_hba.conf",
         "/home/docker/psql/postgresql.conf"
       ],
+      "data_dir": "/home/docker/psql/data",
       "dump_strategy": "docker-exec",
       "auth_resolved": true
     }

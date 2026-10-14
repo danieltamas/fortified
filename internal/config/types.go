@@ -56,9 +56,17 @@ type SSH struct {
 // ArchivePath is a host-level path (and optional glob) to include in
 // the archive alongside database dumps — compose files, TLS certs,
 // cron, anything not already captured through the database engine.
+// Exclude lists absolute paths strictly under Path that borg skips —
+// typically a database's live data directory inside its compose
+// project, which the engine dump already covers and a raw file copy
+// of a running engine can't capture consistently, while the project's
+// compose file and engine config beside it still need archiving.
+// borg applies every entry's excludes to the whole run, so validation
+// rejects an archive path at or under any entry's exclude.
 type ArchivePath struct {
-	Path string `yaml:"path"`
-	Glob string `yaml:"glob,omitempty"`
+	Path    string   `yaml:"path"`
+	Glob    string   `yaml:"glob,omitempty"`
+	Exclude []string `yaml:"exclude,omitempty"`
 }
 
 // Database describes one stateful database container to dump through

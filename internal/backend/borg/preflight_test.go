@@ -23,7 +23,7 @@ func TestFreeSpacePreflightInsufficientFailsBeforeDumps(t *testing.T) {
 
 	_, _, err := b.CreateArchive(context.Background(),
 		"/repo/host-2-example", "pw", "/identity-key", "/work/host-2-example", "2026-07-18",
-		onePostgresDB(), nil, nil, 0, nil, nil) // lastRunTotalDumpSize=0 -> first run, estimate path
+		onePostgresDB(), nil, nil, nil, 0, nil, nil) // lastRunTotalDumpSize=0 -> first run, estimate path
 	if err == nil || !strings.Contains(err.Error(), "insufficient free space") {
 		t.Fatalf("expected CreateArchive to refuse for insufficient free space, got %v", err)
 	}
