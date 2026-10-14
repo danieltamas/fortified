@@ -62,9 +62,9 @@ func TestCreateArchiveStreamsLiveOutput(t *testing.T) {
 	fake := &sshxtest.FakeRunner{
 		Responses: []sshxtest.Response{
 			{Result: sshx.Result{Stdout: "Avail\n999999999999"}}, // df
-			{},                                   // mkdir workspace
-			{Result: sshx.Result{Stdout: "0\n"}}, // dump-progress size estimate
-			{},                                   // dump
+			{},                                // mkdir workspace
+			{Result: sshx.Result{Stdout: ""}}, // dump-progress size estimate: list databases (none)
+			{},                                // dump
 			{Result: sshx.Result{Stdout: "deadbeef  /work/psql.sql\n"}}, // sha256sum
 			{Result: sshx.Result{Stdout: ""}},                           // list databases (none)
 			{},                                                          // writeManifest

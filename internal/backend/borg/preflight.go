@@ -3,6 +3,7 @@ package borg
 import (
 	"context"
 	"fmt"
+	"math"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -11,11 +12,20 @@ import (
 	"github.com/danieltamas/fortified/internal/sshx"
 )
 
+// dumpSizeHeadroom scales the engine-reported table-data estimate up to
+// a staging requirement. Dumps are plain uncompressed SQL text, so they
+// can outgrow the table data that produced them: measured live on one
+// server, mysqldump came to 1.20× its InnoDB data_length, while
+// pg_dumpall came to 0.67× its table data (indexes and on-disk bloat
+// are never dumped, and the old pg_database_size-based estimate asked
+// for 2.3× the real dump, refusing a backup that would have fit).
+const dumpSizeHeadroom = 1.25
+
 // FreeSpacePreflight fails before any dump runs if the target lacks
 // enough free space (SPEC.md §4). Required space is
 // lastRunTotalDumpSize × 1.5, or, when there's no prior run
 // (lastRunTotalDumpSize == 0), the sum of each database's
-// engine-reported size — conservative, since dumps compress.
+// engine-reported table-data size × dumpSizeHeadroom.
 // resolvedAuth maps container name to an already-resolved credential
 // for databases discover couldn't auto-resolve auth for (config's
 // auth_ref, resolved by the caller via internal/secrets — SPEC.md §3);
@@ -26,11 +36,11 @@ func (b Backend) FreeSpacePreflight(ctx context.Context, workspaceDir string, da
 	if lastRunTotalDumpSize > 0 {
 		required = int64(float64(lastRunTotalDumpSize) * 1.5)
 	} else {
-		var err error
-		required, err = b.estimateDatabaseSizes(ctx, databases, resolvedAuth)
+		estimate, err := b.estimateDatabaseSizes(ctx, databases, resolvedAuth)
 		if err != nil {
 			return fmt.Errorf("borg: estimate database sizes: %w", err)
 		}
+		required = int64(math.Ceil(float64(estimate) * dumpSizeHeadroom))
 	}
 
 	avail, err := b.availableSpace(ctx, filepath.Dir(workspaceDir))
@@ -86,22 +96,52 @@ func (b Backend) estimateDatabaseSizes(ctx context.Context, databases []discover
 	return total, nil
 }
 
+// postgresTableDataSizeQuery sizes what pg_dump actually writes out of
+// the connected database: ordinary tables' heap plus TOAST, never
+// indexes (dumped as a CREATE INDEX line) or materialized views (dumped
+// as a REFRESH). Large objects live in the pg_catalog table
+// pg_largeobject but pg_dumpall still dumps them, so that one catalog
+// table counts. pg_table_size only sees the connected database, so
+// callers run it once per database.
+const postgresTableDataSizeQuery = "SELECT coalesce(sum(pg_table_size(c.oid)),0) FROM pg_class c " +
+	"JOIN pg_namespace n ON n.oid = c.relnamespace " +
+	"WHERE c.relkind = 'r' AND (n.nspname NOT IN ('pg_catalog','information_schema') " +
+	"OR c.oid = 'pg_catalog.pg_largeobject'::regclass)"
+
+// postgresDatabaseSize estimates container's pg_dumpall output: the
+// table data of every database pg_dumpall dumps (see
+// postgresTableDataSizeQuery), not pg_database_size's on-disk total.
 func (b Backend) postgresDatabaseSize(ctx context.Context, container, resolvedAuth, username string) (int64, error) {
-	const query = "SELECT coalesce(sum(pg_database_size(datname)),0) FROM pg_database"
-	out, err := b.postgresQuery(ctx, container, resolvedAuth, username, "", query)
+	databases, err := b.postgresDatabases(ctx, container, resolvedAuth, username)
 	if err != nil {
 		return 0, fmt.Errorf("size of %s: %w", container, err)
 	}
-	return strconv.ParseInt(strings.TrimSpace(out), 10, 64)
+	var total int64
+	for _, db := range databases {
+		out, err := b.postgresQuery(ctx, container, resolvedAuth, username, db, postgresTableDataSizeQuery)
+		if err != nil {
+			return 0, fmt.Errorf("size of %s database %s: %w", container, db, err)
+		}
+		size, err := strconv.ParseInt(strings.TrimSpace(out), 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("size of %s database %s: %w", container, db, err)
+		}
+		total += size
+	}
+	return total, nil
 }
+
+// mariaDBTableDataSizeQuery sizes what mysqldump writes: InnoDB's
+// data_length is the clustered (primary-key) data itself, while
+// index_length is secondary indexes, dumped only as definitions.
+const mariaDBTableDataSizeQuery = "SELECT coalesce(sum(data_length),0) FROM information_schema.tables"
 
 func (b Backend) mariaDBDatabaseSize(ctx context.Context, container, resolvedAuth string) (int64, error) {
 	password, err := b.mariaDBRootPassword(ctx, container, resolvedAuth)
 	if err != nil {
 		return 0, fmt.Errorf("resolve auth for %s: %w", container, err)
 	}
-	const query = "SELECT coalesce(sum(data_length+index_length),0) FROM information_schema.tables"
-	out, err := b.mysqlQuery(ctx, container, password, query)
+	out, err := b.mysqlQuery(ctx, container, password, mariaDBTableDataSizeQuery)
 	if err != nil {
 		return 0, fmt.Errorf("size of %s: %w", container, err)
 	}

@@ -158,13 +158,27 @@ func (b Backend) nativePostgresRowCounts(ctx context.Context, resolvedAuth strin
 	return counts, nil
 }
 
+// nativePostgresDatabaseSize is postgresDatabaseSize for the native
+// server: table data per database, never pg_database_size's on-disk
+// total.
 func (b Backend) nativePostgresDatabaseSize(ctx context.Context, resolvedAuth string) (int64, error) {
-	const query = "SELECT coalesce(sum(pg_database_size(datname)),0) FROM pg_database"
-	out, err := b.nativePostgresQuery(ctx, resolvedAuth, "", query)
+	databases, err := b.nativePostgresDatabases(ctx, resolvedAuth)
 	if err != nil {
 		return 0, fmt.Errorf("size of %s (native postgres): %w", nativePostgresContainer, err)
 	}
-	return strconv.ParseInt(strings.TrimSpace(out), 10, 64)
+	var total int64
+	for _, db := range databases {
+		out, err := b.nativePostgresQuery(ctx, resolvedAuth, db, postgresTableDataSizeQuery)
+		if err != nil {
+			return 0, fmt.Errorf("size of %s (native postgres) database %s: %w", nativePostgresContainer, db, err)
+		}
+		size, err := strconv.ParseInt(strings.TrimSpace(out), 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("size of %s (native postgres) database %s: %w", nativePostgresContainer, db, err)
+		}
+		total += size
+	}
+	return total, nil
 }
 
 // NativePostgresDatabaseSizes returns every real database's own size
@@ -277,8 +291,7 @@ func (b Backend) nativeMySQLRowCounts(ctx context.Context, resolvedAuth string) 
 }
 
 func (b Backend) nativeMySQLDatabaseSize(ctx context.Context, resolvedAuth string) (int64, error) {
-	const query = "SELECT coalesce(sum(data_length+index_length),0) FROM information_schema.tables"
-	out, err := b.nativeMySQLQuery(ctx, resolvedAuth, query)
+	out, err := b.nativeMySQLQuery(ctx, resolvedAuth, mariaDBTableDataSizeQuery)
 	if err != nil {
 		return 0, fmt.Errorf("size of %s (native mysql): %w", nativeMySQLContainer, err)
 	}

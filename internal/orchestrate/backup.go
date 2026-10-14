@@ -40,10 +40,11 @@ func backupWorkspaceDir(serverID, workspaceRoot string) string {
 // lastRunTotalDumpSize is deliberately always 0 (the "first run,
 // engine-reported size estimate" path — SPEC.md §4) rather than 1.5×
 // an actually-tracked prior dump size: the manifest schema doesn't
-// record a total size today, and the estimate path is strictly more
-// conservative (it can only ask for *more* headroom, never less), so
-// this is a safe simplification, not a correctness gap — flagged here
-// rather than silently assumed.
+// record a total size today. The estimate path sizes the data a dump
+// actually writes × 1.25 (borg.dumpSizeHeadroom), which is not always
+// more conservative than 1.5× a real prior dump (mysqldump measured at
+// 1.20× its data_length, so 1.5× that dump asks for more) — flagged
+// here rather than silently assumed.
 func Backup(ctx context.Context, d Deps) error {
 	st, err := state.Load(d.StateDir, d.ServerID)
 	if err != nil {

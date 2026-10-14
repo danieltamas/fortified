@@ -213,8 +213,11 @@ than a run that visibly failed — never let a half-successful backup masquerade
 The temp workspace lives **on the target** (that's where the dumps and the borg key are — §3's
 topology), which means staging can exhaust a production disk. Before dumping anything, `backup`
 must run a free-space pre-flight: required = last successful run's total dump size × 1.5, or, on
-a first run, the engine-reported database size (`pg_database_size` / `information_schema` totals
-— conservative, since dumps compress). If free space is insufficient, fail *before* the first
+a first run, the engine-reported size of the data a dump actually writes × 1.25 — Postgres:
+`pg_table_size` of ordinary tables plus `pg_largeobject` in every database (heap + TOAST); MariaDB/MySQL:
+`information_schema` `data_length`. Indexes and on-disk bloat are never dumped, so the on-disk
+`pg_database_size` overstates a dump (measured: 2.3× a real `pg_dumpall`); dumps are uncompressed
+text, so data can also grow (measured: `mysqldump` at 1.20× `data_length`), hence the headroom. If free space is insufficient, fail *before* the first
 dump with a message saying how much is needed and where. Streaming dumps straight into borg would
 remove the space requirement, but it breaks the all-dumps-succeed-before-archive rule above —
 explicitly deferred; do not build it into v1.

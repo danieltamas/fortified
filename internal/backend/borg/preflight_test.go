@@ -2,6 +2,7 @@ package borg
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/danieltamas/fortified/internal/sshx"
@@ -13,7 +14,8 @@ import (
 func TestFreeSpacePreflightInsufficientFailsBeforeDumps(t *testing.T) {
 	fake := &sshxtest.FakeRunner{
 		Responses: []sshxtest.Response{
-			{Result: sshx.Result{Stdout: "999999999999\n"}}, // engine-reported size estimate (huge)
+			{Result: sshx.Result{Stdout: "app\n"}},          // estimate: list databases
+			{Result: sshx.Result{Stdout: "999999999999\n"}}, // estimate: app's table data (huge)
 			{Result: sshx.Result{Stdout: "Avail\n100\n"}},   // df: almost no free space
 		},
 	}
@@ -22,12 +24,12 @@ func TestFreeSpacePreflightInsufficientFailsBeforeDumps(t *testing.T) {
 	_, _, err := b.CreateArchive(context.Background(),
 		"/repo/host-2-example", "pw", "/identity-key", "/work/host-2-example", "2026-07-18",
 		onePostgresDB(), nil, nil, 0, nil, nil) // lastRunTotalDumpSize=0 -> first run, estimate path
-	if err == nil {
-		t.Fatal("expected CreateArchive to refuse when free space is insufficient")
+	if err == nil || !strings.Contains(err.Error(), "insufficient free space") {
+		t.Fatalf("expected CreateArchive to refuse for insufficient free space, got %v", err)
 	}
 
-	if len(fake.Calls) != 2 {
-		t.Fatalf("expected exactly 2 calls (estimate + df), zero dump calls, got %d: %+v", len(fake.Calls), fake.Calls)
+	if len(fake.Calls) != 3 {
+		t.Fatalf("expected exactly 3 calls (2 estimate + df), zero dump calls, got %d: %+v", len(fake.Calls), fake.Calls)
 	}
 }
 
