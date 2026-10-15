@@ -292,13 +292,13 @@ func verifyMariaDB(ctx context.Context, d Deps, image, dumpPath string, dm state
 	// with "Access denied ... (using password: YES)" despite sending the
 	// correct password.
 	env := []string{"MYSQL_ROOT_PASSWORD=" + password, "MYSQL_PWD=" + password}
-	readyScript := fmt.Sprintf(`docker exec -e MYSQL_PWD="$MYSQL_PWD" %s mysql -u root -e 'SELECT 1'`, name)
+	readyScript := fmt.Sprintf(`docker exec -e MYSQL_PWD %s mysql -u root -e 'SELECT 1'`, name)
 	if err := startThrowawayContainer(ctx, d, image, name, env, readyScript); err != nil {
 		return err
 	}
 	defer removeThrowawayContainer(ctx, d, name)
 
-	loadScript := fmt.Sprintf(`docker exec -e MYSQL_PWD="$MYSQL_PWD" -i %s mysql -u root < %s`, name, shellSingleQuote(dumpPath))
+	loadScript := fmt.Sprintf(`docker exec -e MYSQL_PWD -i %s mysql -u root < %s`, name, shellSingleQuote(dumpPath))
 	if _, err := d.Target.Run(ctx, sshx.Mutating, "sh", []string{"-c", loadScript}, sshx.RunOptions{Env: []string{"MYSQL_PWD=" + password}}); err != nil {
 		return fmt.Errorf("load restored dump into throwaway container: %w", err)
 	}
@@ -319,13 +319,13 @@ func verifyNativeMariaDB(ctx context.Context, d Deps, image, dumpPath string, dm
 	// See verifyMariaDB's identical comment on why MYSQL_PWD is set
 	// here too, not just MYSQL_ROOT_PASSWORD.
 	env := []string{"MYSQL_ROOT_PASSWORD=" + throwawayPassword, "MYSQL_PWD=" + throwawayPassword}
-	readyScript := fmt.Sprintf(`docker exec -e MYSQL_PWD="$MYSQL_PWD" %s mysql -u root -e 'SELECT 1'`, name)
+	readyScript := fmt.Sprintf(`docker exec -e MYSQL_PWD %s mysql -u root -e 'SELECT 1'`, name)
 	if err := startThrowawayContainer(ctx, d, image, name, env, readyScript); err != nil {
 		return err
 	}
 	defer removeThrowawayContainer(ctx, d, name)
 
-	loadScript := fmt.Sprintf(`docker exec -e MYSQL_PWD="$MYSQL_PWD" -i %s mysql -u root < %s`, name, shellSingleQuote(dumpPath))
+	loadScript := fmt.Sprintf(`docker exec -e MYSQL_PWD -i %s mysql -u root < %s`, name, shellSingleQuote(dumpPath))
 	if _, err := d.Target.Run(ctx, sshx.Mutating, "sh", []string{"-c", loadScript}, sshx.RunOptions{Env: []string{"MYSQL_PWD=" + throwawayPassword}}); err != nil {
 		return fmt.Errorf("load restored dump into throwaway container: %w", err)
 	}
@@ -389,13 +389,13 @@ func compareRowCounts(dm state.DatabaseManifest, got map[string]int64) error {
 // transient instance right before the restart (observed live during
 // Phase 4's integration tests; the same debounce is needed here).
 //
-// Both the run command and readyScript go through `sh -c` referencing
-// "$VAR" for any secret rather than embedding literal values as argv
-// words: a real value passed directly as a "docker run -e VAR=value"
-// or "docker exec -e VAR=value" argument would be recorded verbatim
-// by audit.Runner (it records args exactly as given), leaking a real
-// database credential into the audit log — the same discipline
-// dumpMariaDB already applies to the dump command itself.
+// Both the run command and readyScript pass secrets as bare
+// "-e VAR" flags, which docker fills from its own environment (set by
+// Session.Run from opts.Env), never as values: a literal
+// "-e VAR=value" would be recorded verbatim by audit.Runner, and even
+// "-e VAR=\"$VAR\"" expands into docker's own argv on the target,
+// where `ps` shows it — the same discipline dumpMariaDB already
+// applies to the dump command itself.
 //
 // cmdArgs, if given, overrides the image's own default command —
 // postgres/mariadb need none (env vars alone drive their init), but
@@ -446,15 +446,15 @@ func removeThrowawayContainer(ctx context.Context, d Deps, name string) {
 	_, _ = d.Target.Run(ctx, sshx.Mutating, "docker", []string{"rm", "-f", name}, sshx.RunOptions{})
 }
 
-// envFlags renders env's "VAR=value" pairs as "-e VAR=\"$VAR\"" docker
-// flags — a reference to the shell variable Session.Run's env-prefix
-// mechanism sets, never the literal value (see startThrowawayContainer's
+// envFlags renders env's "VAR=value" pairs as bare "-e VAR" docker
+// flags, so docker reads each value from its own environment and it
+// never appears on any command line (see startThrowawayContainer's
 // doc comment).
 func envFlags(env []string) string {
 	flags := make([]string, 0, len(env))
 	for _, e := range env {
 		name, _, _ := strings.Cut(e, "=")
-		flags = append(flags, fmt.Sprintf(`-e %s="$%s"`, name, name))
+		flags = append(flags, "-e "+name)
 	}
 	return strings.Join(flags, " ")
 }

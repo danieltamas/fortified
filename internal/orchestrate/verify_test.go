@@ -421,8 +421,8 @@ func TestVerifyThrowawayContainerNeverLeaksSecretIntoArgv(t *testing.T) {
 	}
 
 	runCall := target.Calls[7]
-	if !strings.Contains(strings.Join(runCall.Args, " "), `$MYSQL_ROOT_PASSWORD`) {
-		t.Errorf("docker run call args = %v, want a $MYSQL_ROOT_PASSWORD reference, not a literal value", runCall.Args)
+	if argv := strings.Join(runCall.Args, " "); strings.Contains(argv, "hunter2") || strings.Contains(argv, "$MYSQL_ROOT_PASSWORD") || strings.Contains(argv, "$MYSQL_PWD") || !strings.Contains(argv, "-e MYSQL_ROOT_PASSWORD ") || !strings.Contains(argv, "-e MYSQL_PWD ") {
+		t.Errorf("docker run call args = %v, want bare -e MYSQL_ROOT_PASSWORD and -e MYSQL_PWD flags without values or shell expansions", runCall.Args)
 	}
 	wantEnv := []string{"MYSQL_ROOT_PASSWORD=hunter2", "MYSQL_PWD=hunter2"}
 	if !slices.Equal(runCall.Env, wantEnv) {
@@ -430,8 +430,8 @@ func TestVerifyThrowawayContainerNeverLeaksSecretIntoArgv(t *testing.T) {
 	}
 
 	probeCall := target.Calls[8]
-	if !strings.Contains(strings.Join(probeCall.Args, " "), `$MYSQL_PWD`) {
-		t.Errorf("readiness probe args = %v, want a $MYSQL_PWD reference, not a literal value", probeCall.Args)
+	if argv := strings.Join(probeCall.Args, " "); strings.Contains(argv, "hunter2") || strings.Contains(argv, "$MYSQL_PWD") || !strings.Contains(argv, "-e MYSQL_PWD ") {
+		t.Errorf("readiness probe args = %v, want a bare -e MYSQL_PWD flag without a value or shell expansion", probeCall.Args)
 	}
 	// MYSQL_PWD is deliberately present here too (not just
 	// MYSQL_ROOT_PASSWORD) — see verifyMariaDB's own doc comment on

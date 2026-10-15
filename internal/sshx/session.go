@@ -1,8 +1,12 @@
 package sshx
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -70,64 +74,104 @@ func OpenSession(ctx context.Context, runner Runner, target Target, controlPath 
 // own environment — vanilla ssh does not forward the client's
 // environment to the remote session (that requires SendEnv/AcceptEnv
 // on both ends, which we cannot assume any target has configured).
-// Instead the assignments are prepended to the remote command line via
-// `env` (e.g. `env BORG_PASSPHRASE=... borg create ...`), each
-// shell-quoted like any other argument. This is exactly what SPEC.md
-// §3 means by "passed via the SSH session's environment" — never
-// written to a file on the target. Known trade-off, accepted rather
-// than hidden: the value is briefly visible in `ps` output on both
-// ends for the life of the command, same as any other CLI tool that
-// passes secrets this way; it is never written to disk or logged
-// (audit wraps the logical cmd/args, never this internal construction,
-// and never includes opts.Env in what it records).
+// Nor does it go on the remote command line: argv is readable by any
+// user via `ps` on both ends, which is how a BORG_PASSPHRASE leaked
+// there. Instead the assignments are written to the remote command's
+// stdin, one per line and ended by a blank line, ahead of opts.Stdin;
+// a fixed `sh -c` prelude reads and exports them, then execs cmd with
+// the rest of stdin. This is what SPEC.md §3 means by "passed via the
+// SSH session's environment" — never argv, never a file on the target.
 func (s *Session) Run(ctx context.Context, class Class, cmd string, args []string, opts RunOptions) (Result, error) {
 	sshArgs := controlArgs(s.controlPath)
 	sshArgs = append(sshArgs, destArgs(s.target)...)
 	sshArgs = append(sshArgs, "--")
 
-	words := remoteWords(opts.Env, cmd, args)
-	if opts.Dir != "" {
+	localOpts := opts
+	localOpts.Env = nil
+	localOpts.Dir = ""
+	if opts.LiveStderr != nil && len(opts.Env) > 0 {
+		live := &redactingWriter{w: opts.LiveStderr, env: opts.Env}
+		defer live.flush()
+		localOpts.LiveStderr = live
+	}
+
+	words := append([]string{cmd}, args...)
+	switch {
+	case len(opts.Env) > 0:
+		envLines, err := stdinEnvLines(opts.Env)
+		if err != nil {
+			return Result{}, fmt.Errorf("%s %v over ssh session: %w", cmd, args, err)
+		}
+		localOpts.Stdin = envLines + opts.Stdin
+		script := stdinEnvPrelude
+		if opts.Dir != "" {
+			script += "cd " + shellQuoteIfNeeded(opts.Dir) + " && "
+		}
+		script += `exec "$@"`
+		sshArgs = append(sshArgs, "sh", "-c", shellQuoteIfNeeded(script), "sh")
+		sshArgs = append(sshArgs, quoteWords(words)...)
+	case opts.Dir != "":
 		// A working directory needs shell semantics (`cd ... &&`), so
 		// the whole logical command becomes one quoted script passed
 		// to `sh -c` — same shellQuoteIfNeeded mechanism, just wrapping
 		// the entire line instead of each word separately.
 		script := "cd " + shellQuoteIfNeeded(opts.Dir) + " && " + joinQuoted(words)
 		sshArgs = append(sshArgs, "sh", "-c", shellQuoteIfNeeded(script))
-	} else {
+	default:
 		sshArgs = append(sshArgs, quoteWords(words)...)
 	}
 
-	localOpts := opts
-	localOpts.Env = nil
-	localOpts.Dir = ""
 	result, err := s.runner.Run(ctx, class, "ssh", sshArgs, localOpts)
 	if err != nil {
 		// Never propagate err as-is: the underlying Runner (ExecRunner)
-		// formats its own error using the args it was given, which for
-		// a Session call is sshArgs — and sshArgs embeds opts.Env's
-		// assignments as literal words (the only way to deliver them
-		// without server-side env forwarding, see above). Echoing err
-		// here would put a secret in plain text into whatever the
-		// caller logs or prints. Rebuild the message from cmd/args (the
-		// caller's own logical command, never secret-bearing) and the
-		// exit code/stderr the remote process actually reported.
+		// formats its own error from sshArgs, the transport-level
+		// construction, not the caller's command. Rebuild the message
+		// from cmd/args (the caller's own logical command, never
+		// secret-bearing) and the exit code/stderr the remote process
+		// actually reported.
+		// The remote side can still echo a value back (a tool printing
+		// its environment, a shell quoting a rejected line), so env
+		// values are redacted from stderr before it's returned or wrapped
+		// (and from LiveStderr as it streams, above).
+		result.Stderr = redactEnvValues(result.Stderr, opts.Env)
 		return result, fmt.Errorf("%s %v over ssh session: exit %d: %s", cmd, args, result.ExitCode, result.Stderr)
 	}
 	return result, nil
 }
 
-// remoteWords orders the words that make up one logical remote
-// command: an `env VAR=val ...` prefix (see Run's doc comment) when
-// env vars are needed, then cmd, then args.
-func remoteWords(env []string, cmd string, args []string) []string {
-	words := make([]string, 0, len(env)+1+len(args))
-	if len(env) > 0 {
-		words = append(words, "env")
-		words = append(words, env...)
+// stdinEnvPrelude reads NAME=value lines from stdin up to the first
+// blank line and exports each one. sh's read builtin consumes a pipe
+// one byte at a time, so whatever follows the blank line is left
+// intact for the exec'd command. It exits 125 on a line export
+// rejects rather than running the command without its environment.
+const stdinEnvPrelude = `while IFS= read -r fortified_env && [ -n "$fortified_env" ]; do export "$fortified_env" || exit 125; done; unset fortified_env; `
+
+// stdinEnvPreludeVar is the prelude's own loop variable; an Env entry
+// of that name would be overwritten by the next line read.
+const stdinEnvPreludeVar = "fortified_env"
+
+// envNamePattern is what `export` accepts as a name. Anything else
+// makes export fail and print the whole NAME=value line to stderr.
+var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+// stdinEnvLines renders env for stdinEnvPrelude. A value containing a
+// newline can't survive the line protocol and would be truncated, so
+// it's refused instead of delivered partially.
+func stdinEnvLines(env []string) (string, error) {
+	var b strings.Builder
+	for i, kv := range env {
+		name, _, ok := strings.Cut(kv, "=")
+		if !ok || !envNamePattern.MatchString(name) || name == stdinEnvPreludeVar {
+			return "", fmt.Errorf("env entry %d is not NAME=value with a valid, non-reserved name", i)
+		}
+		if strings.ContainsAny(kv, "\n\r") {
+			return "", fmt.Errorf("env %s: value contains a newline", name)
+		}
+		b.WriteString(kv)
+		b.WriteByte('\n')
 	}
-	words = append(words, cmd)
-	words = append(words, args...)
-	return words
+	b.WriteByte('\n')
+	return b.String(), nil
 }
 
 func quoteWords(words []string) []string {
@@ -140,6 +184,52 @@ func quoteWords(words []string) []string {
 
 func joinQuoted(words []string) string {
 	return strings.Join(quoteWords(words), " ")
+}
+
+// redactEnvValues replaces every non-empty value from env found in s,
+// longest first, so a value that contains another is never left
+// partly exposed by the shorter one's replacement.
+func redactEnvValues(s string, env []string) string {
+	var values []string
+	for _, kv := range env {
+		if _, value, ok := strings.Cut(kv, "="); ok && value != "" {
+			values = append(values, value)
+		}
+	}
+	sort.Slice(values, func(i, j int) bool { return len(values[i]) > len(values[j]) })
+	for _, value := range values {
+		s = strings.ReplaceAll(s, value, "[redacted]")
+	}
+	return s
+}
+
+// redactingWriter applies redactEnvValues to a live stderr stream. It
+// holds output back until a line ends (\n, or the \r a progress line
+// redraws with), so a value split across two writes is still caught.
+type redactingWriter struct {
+	w   io.Writer
+	env []string
+	buf []byte
+}
+
+func (r *redactingWriter) Write(p []byte) (int, error) {
+	r.buf = append(r.buf, p...)
+	if end := bytes.LastIndexAny(r.buf, "\r\n"); end >= 0 {
+		line := redactEnvValues(string(r.buf[:end+1]), r.env)
+		r.buf = append(r.buf[:0], r.buf[end+1:]...)
+		if _, err := io.WriteString(r.w, line); err != nil {
+			return 0, err
+		}
+	}
+	return len(p), nil
+}
+
+// flush writes whatever trailing output never ended its line.
+func (r *redactingWriter) flush() {
+	if len(r.buf) > 0 {
+		_, _ = io.WriteString(r.w, redactEnvValues(string(r.buf), r.env))
+		r.buf = nil
+	}
 }
 
 var _ Runner = (*Session)(nil)

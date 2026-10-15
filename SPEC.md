@@ -117,7 +117,9 @@ covers `fortified` only. `discover` must record tool presence and versions on th
 (`borg --version`, `docker --version`), and `onboard` must refuse to proceed if `borg` is missing,
 telling the operator what to install — never installing it silently as a side effect. Any secret a
 target-side invocation needs (e.g. `BORG_PASSPHRASE`) is resolved on the control host and passed
-per-invocation via the SSH session's environment — never written to a file on the target.
+per-invocation via the SSH session's environment — never written to a file on the target, and
+never on the remote command line, where `ps` on either host would show it: the assignments travel
+on the remote command's stdin and a fixed `sh -c` prelude exports them before exec'ing the command.
 
 ```
 cmd/fortified/        - main package, cobra command tree

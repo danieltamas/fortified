@@ -92,7 +92,7 @@ func containsAll(haystack []string, needles ...string) bool {
 	return true
 }
 
-func TestSessionRunDeliversEnvViaRemoteCommandLine(t *testing.T) {
+func TestSessionRunDeliversEnvViaStdin(t *testing.T) {
 	fake := &sshxtest.FakeRunner{}
 	target := sshx.Target{Host: "203.0.113.10", Port: 15086, User: "root"}
 	session, err := sshx.OpenSession(context.Background(), fake, target, "/tmp/fortified-ssh-env-test.sock")
@@ -102,15 +102,21 @@ func TestSessionRunDeliversEnvViaRemoteCommandLine(t *testing.T) {
 
 	if _, err := session.Run(context.Background(), sshx.Mutating, "borg",
 		[]string{"create", "::archive", "/data"},
-		sshx.RunOptions{Env: []string{"BORG_PASSPHRASE=hunter2"}}); err != nil {
+		sshx.RunOptions{Env: []string{"BORG_PASSPHRASE=hunter2"}, Stdin: "payload"}); err != nil {
 		t.Fatalf("session.Run: %v", err)
 	}
 
 	run := fake.Calls[1]
-	wantArgs := []string{"-o", "ControlPath=/tmp/fortified-ssh-env-test.sock", "-p", "15086", "root@203.0.113.10",
-		"--", "env", "BORG_PASSPHRASE=hunter2", "borg", "create", "::archive", "/data"}
-	if strings.Join(run.Args, "|") != strings.Join(wantArgs, "|") {
-		t.Errorf("run argv = %v, want %v", run.Args, wantArgs)
+	for _, arg := range run.Args {
+		if strings.Contains(arg, "hunter2") {
+			t.Fatal("secret reached ssh argv")
+		}
+	}
+	if run.Stdin != "BORG_PASSPHRASE=hunter2\n\npayload" {
+		t.Errorf("stdin = %q, want env, blank line, then payload", run.Stdin)
+	}
+	if !containsAll(run.Args, "borg", "create", "::archive", "/data") {
+		t.Errorf("run argv = %v, missing logical command", run.Args)
 	}
 	// The local ssh process itself must not also receive the secret via
 	// its own Env — vanilla ssh wouldn't forward it anyway, and doing so
@@ -135,10 +141,19 @@ func TestSessionRunWithDirWrapsInShell(t *testing.T) {
 	}
 
 	run := fake.Calls[1]
-	wantArgs := []string{"-o", "ControlPath=/tmp/fortified-ssh-dir-test.sock", "-p", "15086", "root@203.0.113.10",
-		"--", "sh", "-c", "'cd /tmp/restore-scratch && env BORG_PASSPHRASE=hunter2 borg extract ::archive'"}
-	if strings.Join(run.Args, "|") != strings.Join(wantArgs, "|") {
-		t.Errorf("run argv = %v, want %v", run.Args, wantArgs)
+	for _, arg := range run.Args {
+		if strings.Contains(arg, "hunter2") {
+			t.Fatal("secret reached ssh argv")
+		}
+	}
+	if !strings.Contains(strings.Join(run.Args, " "), `cd /tmp/restore-scratch && exec "$@"`) {
+		t.Errorf("run argv = %v, want cd before exec", run.Args)
+	}
+	if run.Stdin != "BORG_PASSPHRASE=hunter2\n\n" {
+		t.Errorf("stdin = %q, want env followed by blank line", run.Stdin)
+	}
+	if len(run.Env) != 0 {
+		t.Fatal("local runner received Env")
 	}
 }
 
