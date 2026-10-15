@@ -280,7 +280,7 @@ the default `~/.config/fortified/fleet.yaml`.
 |---|---|
 | `discover <server-id>` | Inspects a target server over SSH (read-only): containers, bind mounts, databases, volume manager, RAID, exposure, crontab, SSH/TLS/tunnel config. Writes or fills in the server's `fleet.yaml` entry directly — auto-resolving the Storage Box destination when the rest of the fleet already agrees on one, prompting with a live-fetched list otherwise. Never touches an already-onboarded server's config. `--emit-config` prints a stanza to stdout instead, for scripting. `--refresh-databases` updates only an already-onboarded server's known-database list in local state (e.g. a database container added after onboarding) without touching config, keys, or the repo. |
 | `onboard <server-id>` | Provisions the server's isolated Hetzner Storage Box subaccount, installs its append-only automation key, and initializes the encrypted Borg repo. Requires `--escrow-acknowledged` to reach the repo-init step — see [Passphrase escrow](#security-model). Resumable: re-running picks up from the last completed step. |
-| `backup [server-id]` | Stages every configured database's dump (checksummed as it goes), then creates a new Borg archive. `--all` runs every configured server instead of one. Prints live upload progress and a summary of what was backed up when it finishes, and refreshes that server's status cache. |
+| `backup [server-id]` | Stages every configured database's dump (checksummed as it goes), then creates a new Borg archive. `--all` runs every configured server instead of one. Prints live upload progress and a summary of what was backed up when it finishes, and refreshes that server's status cache. Afterwards it scans the server for compose projects and bind mounts that no archive path covers and prints `warning: not archived: <path>` for each (advisory; the scan itself failing prints `warning: archive coverage check failed`). |
 | `verify <server-id>` | Restores the latest archive into a scratch location and proves it matches the manifest recorded at backup time (SHA-256 + per-table row counts) — not just "extraction didn't error." |
 | `check <server-id>` | Runs Borg's own repo integrity check. Should be run (and pass) before any `prune`. |
 | `restore <server-id>` | Extracts an archive — or, with `--db`, just one database's own dump file — into a directory on the target. Run without `--archive` to list the repo's archives instead. Refuses a non-empty target or a path that's a live database's own data mount. |
@@ -320,6 +320,11 @@ servers:
       - path: /etc/nginx
       - path: /home/myapp
         glob: "*/docker-compose.yml"   # optional
+      - path: /home/docker/psql
+        exclude: [/home/docker/psql/data]  # optional — must sit strictly
+                                           # under its own path; Borg applies
+                                           # every exclude to every path, so
+                                           # no archived path may be under one
     databases:
       - kind: postgres
         container: psql
@@ -405,6 +410,11 @@ should rarely need to hand-write a `servers:` entry from scratch.
   a Storage Box directly; every command proxies through the protected
   server's own automation key, except `prune` and `status --direct`'s
   explicit, never-persisted exceptions (see [Architecture](#architecture)).
+- **Secrets never touch a command line.** The Borg passphrase and database
+  passwords travel to the target over the SSH session's stdin and are
+  exported there before the command runs, so they never appear in `ps` on
+  the control host or the target (Docker gets bare `-e NAME` flags). Any
+  echo of them in a failed command's stderr is redacted.
 
 This model has been through an adversarial pass on purpose: an in-session
 review plus an independent, cross-vendor audit (a different model auditing
